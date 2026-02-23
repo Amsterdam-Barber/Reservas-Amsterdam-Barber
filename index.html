@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>💈 Amsterdam Barber Club - ¡Reserva tu Cita! 💈</title>
+    <meta name="description" content="Reserva tu cita en Amsterdam Barber Club. Expertos en Barbería, Manicura y Pedicura en Montenegro, Quindío.">
+    <meta property="og:title" content="💈 Amsterdam Barber Club | Reservas">
+    <meta property="og:description" content="Agenda tu cita fácil y rápido. Cortes, barba, manicura y pedicura con los mejores profesionales.">
+    <link rel="icon" type="image/jpeg" href="img/logo.jpg">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <style>
+        .mensaje-barberia {
+            background: linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1));
+            border-color: rgba(250, 204, 21, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(234, 179, 8, 0.1), 0 2px 4px -1px rgba(234, 179, 8, 0.06);
+        }
+        .mensaje-unas {
+            background: linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1));
+            border-color: rgba(244, 114, 182, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.1), 0 2px 4px -1px rgba(236, 72, 153, 0.06);
+        }
+        .mensaje-ambos {
+            background: linear-gradient(to right, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+            border-color: rgba(96, 165, 250, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(59, 130, 246, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans relative">
+
+    <header class="text-center py-12 bg-gray-800 border-b border-yellow-600 shadow-xl flex flex-col items-center">
+        <div class="w-80 md:w-96 mb-6 rounded-2xl border-2 border-yellow-500 overflow-hidden shadow-2xl transition-transform duration-300 hover:scale-105 cursor-default">
+            <img src="img/logo.jpg" alt="Logo Amsterdam Barber Club" class="w-full h-auto block" onerror="this.style.display='none';">
+        </div>
+        <h1 class="text-4xl font-bold text-yellow-500 mb-2 tracking-widest">AMSTERDAM BARBER CLUB</h1>
+        <p class="text-gray-300 text-lg">Montenegro Quindío, Zona Galería Calle 20 7-14 Local 2</p>
+        <p class="text-gray-500 text-sm mt-1">(Enseguida del Chavo)</p>
+    </header>
+
+    <section class="max-w-4xl mx-auto mt-12 px-4 text-center">
+        <h2 class="text-3xl font-bold text-white mb-8">¿Qué servicio deseas hoy?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button onclick="mostrarSeccion('barberia')" class="bg-gray-800 border-2 border-yellow-600 hover:bg-yellow-600 text-white font-bold py-6 px-4 rounded-xl shadow-2xl transition duration-300 transform hover:-translate-y-2 text-xl">
+                💈 Barbería
+            </button>
+            <button onclick="mostrarSeccion('unas')" class="bg-gray-800 border-2 border-pink-600 hover:bg-pink-600 text-white font-bold py-6 px-4 rounded-xl shadow-2xl transition duration-300 transform hover:-translate-y-2 text-xl">
+                💅 Manicura & Pedicura
+            </button>
+            <button onclick="mostrarSeccion('ambos')" class="bg-gray-800 border-2 border-blue-600 hover:bg-blue-600 text-white font-bold py-6 px-4 rounded-xl shadow-2xl transition duration-300 transform hover:-translate-y-2 text-xl">
+                ✨ ¡Quiero Ambos!
+            </button>
+        </div>
+    </section>
+
+    <section class="max-w-5xl mx-auto mt-12 px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
+            <h3 class="text-xl font-bold text-yellow-500 mb-4">⏰ Horarios de Atención</h3>
+            <ul class="text-gray-300 space-y-2 mb-6">
+                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Lunes a Sábado:</span> <span class="text-yellow-500 font-semibold">9:00 AM - 8:00 PM</span></li>
+                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Domingos:</span> <span class="text-yellow-500 font-semibold">9:00 AM - 2:00 PM</span></li>
+            </ul>
+            <h3 class="text-xl font-bold text-yellow-500 mb-4">📱 Nuestras Redes</h3>
+            <div class="flex flex-wrap gap-4">
+                <a href="https://www.instagram.com/amsterdam.barber.club04?igsh=NXNhaGtiZHVnZTAz" target="_blank" class="bg-gradient-to-tr from-yellow-500 to-yellow-600 text-gray-900 font-bold py-2 px-4 rounded hover:scale-105 transition shadow-lg flex-1 text-center">📸 Instagram</a>
+                <a href="https://www.facebook.com/share/1DSZsayEoS/" target="_blank" class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:scale-105 transition shadow-lg flex-1 text-center">📘 Facebook</a>
+                <a href="https://wa.me/message/JVB72UJXS2NZF1?src=qr" target="_blank" class="bg-green-600 text-white font-bold py-2 px-4 rounded hover:scale-105 transition shadow-lg w-full text-center mt-2">💬 Contáctanos al WhatsApp</a>
+            </div>
+        </div>
+        <div class="bg-gray-800 p-2 rounded-xl border border-gray-700 shadow-lg h-64 md:h-auto">
+            <iframe src="https://maps.google.com/maps?q=Amsterdam+Barber+Club,+Montenegro,+Quindio&t=&z=16&ie=UTF8&iwloc=&output=embed" class="w-full h-full rounded-lg" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
+    </section>
+
+    <div id="zona-dinamica" class="mt-12">
+        
+        <div id="vista-barberia" class="hidden">
+            <h2 class="text-2xl font-bold text-center text-yellow-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestra Barbería</h2>
+            
+            <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(1).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(2).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(3).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(4).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+            </section>
+
+            <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-yellow-600 mb-16">
+                <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Barbería</h2>
+                <form id="formBarberia" class="space-y-4" onsubmit="enviarReserva(event, 'barberia')">
+                    <input type="text" id="nomB" required placeholder="Tu Nombre Completo" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                    
+                    <input type="tel" id="telB" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                    
+                    <select id="servB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                        <option value="" disabled selected>Selecciona un servicio...</option>
+                        <option value="Corte Caballero - $19.000">Corte Caballero ($19.000)</option>
+                        <option value="Corte y Barba - $25.000">Corte y Barba ($25.000)</option>
+                        <option value="Barba - $10.000">Barba ($10.000)</option>
+                    </select>
+
+                    <div class="pt-2">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+                        <div class="flex justify-center gap-6">
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profB" value="Santiago" required class="peer hidden">
+                                <img src="img/equipo/santiago.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Santiago&background=1f2937&color=eab308&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-yellow-500 peer-checked:font-bold">Santiago</span>
+                            </label>
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profB" value="Armando" required class="peer hidden">
+                                <img src="img/equipo/armando.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Armando&background=1f2937&color=eab308&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-yellow-500 peer-checked:font-bold">Armando</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <input type="date" id="fechaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                        <input type="time" id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                    </div>
+
+                    <div class="mt-6 p-4 mensaje-barberia border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
+                        <div class="flex-shrink-0">
+                            <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-yellow-400 leading-relaxed">
+                                <span class="font-bold text-yellow-500 text-base block mb-1">¡Casi listo!</span>
+                                Confirma tu cita en el botón de abajo y en breve te escribiremos por WhatsApp para asegurar este espacio perfecto para ti.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Cita</button>
+                </form>
+            </section>
+        </div>
+
+        <div id="vista-unas" class="hidden">
+            <h2 class="text-2xl font-bold text-center text-pink-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestro Trabajo en Uñas</h2>
+            
+            <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(1).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(2).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(3).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(4).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+            </section>
+
+            <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-pink-600 mb-16">
+                <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Manicura & Pedicura</h2>
+                <form id="formUnas" class="space-y-4" onsubmit="enviarReserva(event, 'unas')">
+                    <input type="text" id="nomU" required placeholder="Tu Nombre Completo" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                    
+                    <input type="tel" id="telU" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                    
+                    <select id="servU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                        <option value="" disabled selected>Selecciona un servicio...</option>
+                        <option value="Tradicional - $17.000">Tradicional ($17.000)</option>
+                        <option value="Semi-Permanente - $35.000">Semi-Permanente ($35.000)</option>
+                        <option value="Semi + Base Rubber - $50.000">Semi + Base Rubber ($50.000)</option>
+                        <option value="Dipping - $50.000">Dipping ($50.000)</option>
+                        <option value="Press-On - $70.000">Press-On ($70.000)</option>
+                        <option value="Polygel - $80.000">Polygel ($80.000)</option>
+                        <option value="Acrílicas - $110.000">Acrílicas ($110.000)</option>
+                    </select>
+
+                    <div class="pt-2">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+                        <div class="flex justify-center gap-6">
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profU" value="Valentina" required class="peer hidden">
+                                <img src="img/equipo/valentina.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Valentina&background=1f2937&color=ec4899&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-pink-500 peer-checked:font-bold">Valentina</span>
+                            </label>
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profU" value="Anguie" required class="peer hidden">
+                                <img src="img/equipo/anguie.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Anguie&background=1f2937&color=ec4899&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-pink-500 peer-checked:font-bold">Anguie</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <input type="date" id="fechaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                        <input type="time" id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                    </div>
+
+                    <div class="mt-6 p-4 mensaje-unas border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
+                        <div class="flex-shrink-0">
+                            <svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-pink-400 leading-relaxed">
+                                <span class="font-bold text-pink-500 text-base block mb-1">¡Casi listo!</span>
+                                Confirma tu cita en el botón de abajo y en breve te escribiremos por WhatsApp para asegurar este espacio perfecto para ti.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Cita</button>
+                </form>
+            </section>
+        </div>
+
+        <div id="vista-ambos" class="hidden">
+            <h2 class="text-2xl font-bold text-center text-blue-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">La Experiencia Completa</h2>
+            
+            <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(1).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(2).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(3).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(4).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+            </section>
+
+            <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-blue-600 mb-16">
+                <h2 class="text-xl font-bold text-center mb-6 text-white">Configura tu súper combo</h2>
+                <form id="formAmbos" class="space-y-4" onsubmit="enviarReserva(event, 'ambos')">
+                    <input type="text" id="nomA" required placeholder="Tu Nombre Completo" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 outline-none">
+                    
+                    <input type="tel" id="telA" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 outline-none">
+                    
+                    <div class="p-4 border border-yellow-600 rounded-lg">
+                        <label class="block text-yellow-500 font-bold mb-3 text-center">1. Servicio de Barbería</label>
+                        <select id="servAB" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-yellow-500 outline-none">
+                            <option value="" disabled selected>Selecciona corte/barba...</option>
+                            <option value="Corte Caballero - $19.000">Corte Caballero ($19.000)</option>
+                            <option value="Corte y Barba - $25.000">Corte y Barba ($25.000)</option>
+                            <option value="Barba - $10.000">Barba ($10.000)</option>
+                        </select>
+                        
+                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+                        
+                        <div class="flex justify-center gap-4">
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profAB" value="Santiago" required class="peer hidden">
+                                <img src="img/equipo/santiago.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Santiago&background=1f2937&color=eab308'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all object-cover">
+                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-yellow-500">Santiago</span>
+                            </label>
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profAB" value="Armando" required class="peer hidden">
+                                <img src="img/equipo/armando.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Armando&background=1f2937&color=eab308'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all object-cover">
+                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-yellow-500">Armando</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="p-4 border border-pink-600 rounded-lg">
+                        <label class="block text-pink-500 font-bold mb-3 text-center">2. Manicura & Pedicura</label>
+                        <select id="servAU" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                            <option value="" disabled selected>Selecciona servicio...</option>
+                            <option value="Tradicional - $17.000">Tradicional ($17.000)</option>
+                            <option value="Semi-Permanente - $35.000">Semi-Permanente ($35.000)</option>
+                            <option value="Semi + Base Rubber - $50.000">Semi + Base Rubber ($50.000)</option>
+                            <option value="Dipping - $50.000">Dipping ($50.000)</option>
+                            <option value="Press-On - $70.000">Press-On ($70.000)</option>
+                            <option value="Polygel - $80.000">Polygel ($80.000)</option>
+                            <option value="Acrílicas - $110.000">Acrílicas ($110.000)</option>
+                        </select>
+                        
+                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+
+                        <div class="flex justify-center gap-4">
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profAU" value="Valentina" required class="peer hidden">
+                                <img src="img/equipo/valentina.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Valentina&background=1f2937&color=ec4899'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all object-cover">
+                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-pink-500">Valentina</span>
+                            </label>
+                            <label class="cursor-pointer text-center group">
+                                <input type="radio" name="profAU" value="Anguie" required class="peer hidden">
+                                <img src="img/equipo/anguie.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Anguie&background=1f2937&color=ec4899'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all object-cover">
+                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-pink-500">Anguie</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-center space-x-2 mt-4">
+                        <input type="checkbox" id="mismaFecha" checked onchange="toggleFechas()" class="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                        <label for="mismaFecha" class="text-gray-300 text-sm font-medium cursor-pointer">Usar la misma fecha y hora para ambos</label>
+                    </div>
+
+                    <div class="p-4 bg-gray-900 rounded-lg border border-blue-500 transition-all duration-300 mt-4">
+                        <div id="boxFechaA">
+                            <label id="labelFechaA" class="block text-blue-400 text-sm mb-2 text-center">Selecciona Fecha y Hora del Combo</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="date" id="fechaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                                <input type="time" id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+
+                        <div id="boxFechaU" class="hidden mt-4 pt-4 border-t border-gray-700">
+                            <label class="block text-pink-400 text-sm mb-2 text-center">Fecha y Hora para Manicura/Pedicura</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="date" id="fechaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                                <input type="time" id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 mensaje-ambos border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
+                        <div class="flex-shrink-0">
+                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-blue-400 leading-relaxed">
+                                <span class="font-bold text-blue-500 text-base block mb-1">¡Casi listo!</span>
+                                Confirma tu cita en el botón de abajo y en breve te escribiremos por WhatsApp para asegurar este espacio perfecto para ti.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Combo Completo</button>
+                </form>
+            </section>
+        </div>
+
+    </div>
+
+    <footer class="bg-gray-950 border-t border-gray-800 py-8 mt-12 pb-24 text-center">
+        <p class="text-gray-400 text-sm">© 2026 CARLOS SILVA</p>
+        <p class="text-gray-400 text-sm">+57 3145586557</p>
+    </footer>
+
+    <a href="https://wa.me/message/JVB72UJXS2NZF1?src=qr" target="_blank" class="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:scale-110 transition-all duration-300 z-50 group flex items-center justify-center">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.122.551 4.192 1.597 6.014L.15 24l6.102-1.603c1.767.962 3.765 1.47 5.779 1.47 6.646 0 12.031-5.385 12.031-12.031S18.677 0 12.031 0zm4.242 17.182c-.19.537-1.12.983-1.55.983-.418 0-.964-.176-2.528-.823-2.222-.924-3.64-3.18-3.738-3.313-.095-.131-.892-1.19-.892-2.269 0-1.079.56-1.61.76-1.821.19-.21.413-.263.551-.263.14 0 .278 0 .393.007.12.007.278-.046.425.309.152.368.52 1.267.568 1.366.046.098.077.213.015.334-.06.12-.093.195-.183.303-.093.106-.195.23-.28.322-.092.1-.19.208-.08.398.11.19.492.812 1.055 1.312.727.646 1.341.846 1.531.94.19.092.302.08.413-.046.11-.126.475-.55.602-.741.127-.19.253-.158.425-.093.172.064 1.087.513 1.274.606.186.094.31.14.356.22.046.08.046.46-.144.996z"/>
+        </svg>
+        <span class="absolute right-16 bg-gray-800 text-sm font-bold w-max px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-green-500">¡Chatea con nosotros!</span>
+    </a>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwqvwGf_vfvzuWHVUGiTlZA45BTiT34mhbXGH85QtUKIQ64PMePrThRson2fFXheFbn/exec";
+        const TELEFONO = "573133454273";
+
+        let titleText = document.title + "   ";
+        function scrollTitle() {
+            titleText = titleText.substring(1) + titleText.substring(0, 1);
+            document.title = titleText.substring(0, titleText.length - 1);
+        }
+        setInterval(scrollTitle, 300);
+
+        window.onload = function() {
+            const hoy = new Date();
+            const año = hoy.getFullYear();
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            const fechaActual = `${año}-${mes}-${dia}`;
+
+            const inputsFechas = ['fechaB', 'fechaU', 'fechaA', 'fechaA_U'];
+            const inputsHoras = ['horaB', 'horaU', 'horaA', 'horaA_U'];
+
+            inputsFechas.forEach((idFecha, index) => {
+                const inputFecha = document.getElementById(idFecha);
+                const inputHora = document.getElementById(inputsHoras[index]);
+
+                if(inputFecha && inputHora) {
+                    inputFecha.min = fechaActual;
+
+                    inputFecha.addEventListener('change', function() {
+                        const ahora = new Date();
+                        const fechaSeleccionadaStr = this.value;
+                        const fechaHoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+
+                        const fechaObj = new Date(fechaSeleccionadaStr + 'T00:00:00');
+                        const diaSemana = fechaObj.getDay(); 
+
+                        let horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+
+                        if (fechaSeleccionadaStr === fechaHoyStr) {
+                            const horasActual = String(ahora.getHours()).padStart(2, '0');
+                            const minutosActual = String(ahora.getMinutes()).padStart(2, '0');
+                            const horaActualStr = `${horasActual}:${minutosActual}`;
+
+                            if (horaActualStr > horaApertura) {
+                                inputHora.min = horaActualStr;
+                            } else {
+                                inputHora.min = horaApertura;
+                            }
+                        } else {
+                            inputHora.min = horaApertura;
+                        }
+                        
+                        inputHora.max = "20:00";
+                    });
+                }
+            });
+        };
+
+        function mostrarSeccion(seccion) {
+            document.getElementById('vista-barberia').classList.add('hidden');
+            document.getElementById('vista-unas').classList.add('hidden');
+            document.getElementById('vista-ambos').classList.add('hidden');
+            
+            document.getElementById('vista-' + seccion).classList.remove('hidden');
+            
+            if (seccion === 'barberia') {
+                const icono1 = confetti.shapeFromText({ text: '💈' });
+                const icono2 = confetti.shapeFromText({ text: '✂️' });
+                confetti({
+                    particleCount: 30, spread: 70, origin: { y: 0.4 },
+                    shapes: [icono1, icono2], scalar: 2.5, ticks: 600, gravity: 0.7, startVelocity: 35
+                });
+            } else if (seccion === 'unas') {
+                const icono1 = confetti.shapeFromText({ text: '💅' });
+                const icono2 = confetti.shapeFromText({ text: '🌸' });
+                confetti({
+                    particleCount: 30, spread: 70, origin: { y: 0.4 },
+                    shapes: [icono1, icono2], scalar: 2.5, ticks: 600, gravity: 0.7, startVelocity: 35
+                });
+            } else if (seccion === 'ambos') {
+                const icono1 = confetti.shapeFromText({ text: '💈' });
+                const icono2 = confetti.shapeFromText({ text: '💅' });
+                const icono3 = confetti.shapeFromText({ text: '🔥' });
+                confetti({
+                    particleCount: 45, spread: 100, origin: { y: 0.4 },
+                    shapes: [icono1, icono2, icono3], scalar: 2.5, ticks: 600, gravity: 0.7, startVelocity: 35
+                });
+            }
+
+            document.getElementById('zona-dinamica').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleFechas() {
+            const checkbox = document.getElementById('mismaFecha');
+            const boxUñas = document.getElementById('boxFechaU');
+            const labelA = document.getElementById('labelFechaA');
+            const fechaU = document.getElementById('fechaA_U');
+            const horaU = document.getElementById('horaA_U');
+
+            if (checkbox.checked) {
+                boxUñas.classList.add('hidden');
+                labelA.innerText = "Selecciona Fecha y Hora del Combo";
+                labelA.classList.remove('text-yellow-500');
+                labelA.classList.add('text-blue-400');
+                fechaU.required = false;
+                horaU.required = false;
+            } else {
+                boxUñas.classList.remove('hidden');
+                labelA.innerText = "Fecha y Hora para Barbería";
+                labelA.classList.remove('text-blue-400');
+                labelA.classList.add('text-yellow-500');
+                fechaU.required = true;
+                horaU.required = true;
+            }
+        }
+
+        async function enviarReserva(e, tipo) {
+            e.preventDefault();
+            
+            let btn = e.target.querySelector('button[type="submit"]');
+            let textoOriginal = btn.innerText;
+            
+            btn.innerText = "Procesando cita...";
+            btn.disabled = true;
+
+            // ¡CORRECCIÓN AQUÍ!: Dejamos 'datos' vacío al inicio. 
+            // Ya NO se le inyecta el número de la barbería al Excel.
+            let datos = {};
+
+            if (tipo === 'barberia') {
+                datos.nombre = document.getElementById('nomB').value;
+                // Captura el número del cliente
+                datos.celular = document.getElementById('telB').value;
+                datos.servicio = document.getElementById('servB').value;
+                datos.profesional = document.querySelector('input[name="profB"]:checked').value;
+                datos.fecha = document.getElementById('fechaB').value;
+                datos.hora = document.getElementById('horaB').value;
+            } else if (tipo === 'unas') {
+                datos.nombre = document.getElementById('nomU').value;
+                // Captura el número del cliente
+                datos.celular = document.getElementById('telU').value;
+                datos.servicio = document.getElementById('servU').value;
+                datos.profesional = document.querySelector('input[name="profU"]:checked').value;
+                datos.fecha = document.getElementById('fechaU').value;
+                datos.hora = document.getElementById('horaU').value;
+            } else if (tipo === 'ambos') {
+                datos.nombre = document.getElementById('nomA').value;
+                // Captura el número del cliente
+                datos.celular = document.getElementById('telA').value;
+                datos.servicio = document.getElementById('servAB').value + " + " + document.getElementById('servAU').value;
+                datos.profesional = document.querySelector('input[name="profAB"]:checked').value + " y " + document.querySelector('input[name="profAU"]:checked').value;
+                
+                const usaMismaFecha = document.getElementById('mismaFecha').checked;
+                if (usaMismaFecha) {
+                    datos.fecha = document.getElementById('fechaA').value;
+                    datos.hora = document.getElementById('horaA').value;
+                } else {
+                    datos.fecha = `Barbería: ${document.getElementById('fechaA').value} | Uñas: ${document.getElementById('fechaA_U').value}`;
+                    datos.hora = `Barbería: ${document.getElementById('horaA').value} | Uñas: ${document.getElementById('horaA_U').value}`;
+                }
+            }
+
+            try {
+                await fetch(WEB_APP_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify(datos), headers: { 'Content-Type': 'application/json' }
+                });
+
+                btn.innerText = "¡Cita Confirmada! 🎉";
+                btn.classList.remove('bg-yellow-600', 'bg-pink-600', 'bg-blue-600', 'hover:bg-yellow-500', 'hover:bg-pink-500', 'hover:bg-blue-500');
+                btn.classList.add('bg-green-500', 'hover:bg-green-400');
+
+                confetti({
+                    particleCount: 150, spread: 80, origin: { y: 0.6 },
+                    colors: ['#eab308', '#ec4899', '#3b82f6', '#ffffff'],
+                    ticks: 600, gravity: 0.7 
+                });
+
+                setTimeout(() => {
+                    // ¡CORRECCIÓN AQUÍ!: Se usa la variable TELEFONO directa para abrir tu chat y se incluye el celular del cliente en el mensaje
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A%0A_(Quedo atento a la confirmación de disponibilidad)_`;
+                    window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
+                    
+                    setTimeout(() => {
+                        btn.innerText = textoOriginal;
+                        btn.disabled = false;
+                        btn.classList.remove('bg-green-500', 'hover:bg-green-400');
+                        if(tipo === 'barberia') btn.classList.add('bg-yellow-600', 'hover:bg-yellow-500');
+                        if(tipo === 'unas') btn.classList.add('bg-pink-600', 'hover:bg-pink-500');
+                        if(tipo === 'ambos') btn.classList.add('bg-blue-600', 'hover:bg-blue-500');
+                    }, 2000);
+
+                }, 2500);
+
+            } catch (error) {
+                alert("Hubo un error al guardar la cita.");
+                btn.innerText = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
