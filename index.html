@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-WF9Z7X7L');</script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XX7NBMRC4X"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-XX7NBMRC4X');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -43,16 +46,14 @@
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans relative">
 
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WF9Z7X7L"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300" onclick="cerrarLightbox(event)">
-        <button id="lb-close" onclick="cerrarLightbox()" class="absolute top-6 right-6 text-5xl font-bold transition-transform hover:scale-110 z-[101]">&times;</button>
+        <button id="lb-close" onclick="cerrarLightbox()" class="absolute top-6 right-6 text-5xl font-bold transition-transform hover:scale-110 z-[101]">×</button>
         
-        <button id="lb-prev" onclick="cambiarFoto(-1, event)" class="absolute left-2 md:left-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">&#10094;</button>
+        <button id="lb-prev" onclick="cambiarFoto(-1, event)" class="absolute left-2 md:left-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">❮</button>
         
         <img id="lb-imagen" src="" class="object-contain rounded-lg shadow-[0_0_25px_rgba(0,0,0,0.7)] transform transition-all duration-300" onclick="event.stopPropagation()">
         
-        <button id="lb-next" onclick="cambiarFoto(1, event)" class="absolute right-2 md:right-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">&#10095;</button>
+        <button id="lb-next" onclick="cambiarFoto(1, event)" class="absolute right-2 md:right-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">❯</button>
     </div>
 
     <header class="text-center py-12 bg-gray-800 border-b border-yellow-600 shadow-xl flex flex-col items-center">
@@ -149,14 +150,8 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Fecha</label>
-                            <input type="date" id="fechaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
-                            <input type="time" id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
-                        </div>
+                        <input type="date" id="fechaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                        <input type="time" id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
                     </div>
 
                     <div class="mt-6 p-4 mensaje-barberia border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
@@ -229,14 +224,8 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Fecha</label>
-                            <input type="date" id="fechaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
-                            <input type="time" id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
-                        </div>
+                        <input type="date" id="fechaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                        <input type="time" id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     </div>
 
                     <div class="mt-6 p-4 mensaje-unas border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
@@ -344,28 +333,16 @@
                         <div id="boxFechaA">
                             <label id="labelFechaA" class="block text-blue-400 text-sm mb-2 text-center">Selecciona Fecha y Hora del Combo</label>
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Fecha</label>
-                                    <input type="date" id="fechaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Hora</label>
-                                    <input type="time" id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
-                                </div>
+                                <input type="date" id="fechaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                                <input type="time" id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
                             </div>
                         </div>
 
                         <div id="boxFechaU" class="hidden mt-4 pt-4 border-t border-gray-700">
                             <label class="block text-pink-400 text-sm mb-2 text-center">Fecha y Hora para Manicura/Pedicura</label>
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Fecha</label>
-                                    <input type="date" id="fechaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Hora</label>
-                                    <input type="time" id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
-                                </div>
+                                <input type="date" id="fechaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                                <input type="time" id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
                             </div>
                         </div>
                     </div>
