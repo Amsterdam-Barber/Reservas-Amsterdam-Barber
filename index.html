@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-WF9Z7X7L');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -29,9 +34,26 @@
             border-color: rgba(96, 165, 250, 0.8);
             box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(59, 130, 246, 0.06);
         }
+        /* Animación suave para el lightbox */
+        #lightbox img {
+            max-height: 85vh;
+            max-width: 90vw;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans relative">
+
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WF9Z7X7L"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300" onclick="cerrarLightbox(event)">
+        <button id="lb-close" onclick="cerrarLightbox()" class="absolute top-6 right-6 text-5xl font-bold transition-transform hover:scale-110 z-[101]">&times;</button>
+        
+        <button id="lb-prev" onclick="cambiarFoto(-1, event)" class="absolute left-2 md:left-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">&#10094;</button>
+        
+        <img id="lb-imagen" src="" class="object-contain rounded-lg shadow-[0_0_25px_rgba(0,0,0,0.7)] transform transition-all duration-300" onclick="event.stopPropagation()">
+        
+        <button id="lb-next" onclick="cambiarFoto(1, event)" class="absolute right-2 md:right-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">&#10095;</button>
+    </div>
 
     <header class="text-center py-12 bg-gray-800 border-b border-yellow-600 shadow-xl flex flex-col items-center">
         <div class="w-80 md:w-96 mb-6 rounded-2xl border-2 border-yellow-500 overflow-hidden shadow-2xl transition-transform duration-300 hover:scale-105 cursor-default">
@@ -61,8 +83,8 @@
         <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h3 class="text-xl font-bold text-yellow-500 mb-4">⏰ Horarios de Atención</h3>
             <ul class="text-gray-300 space-y-2 mb-6">
-                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Lunes a Sábado:</span> <span class="text-yellow-500 font-semibold">9:00 AM - 8:00 PM</span></li>
-                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Domingos:</span> <span class="text-yellow-500 font-semibold">9:00 AM - 2:00 PM</span></li>
+                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Lunes a Sábado:</span> <span class="text-yellow-500 font-semibold">10:00 AM - 8:00 PM</span></li>
+                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Sabado y Domingo:</span> <span class="text-yellow-500 font-semibold">9:30 AM - 8:00 PM</span></li>
             </ul>
             <h3 class="text-xl font-bold text-yellow-500 mb-4">📱 Nuestras Redes</h3>
             <div class="flex flex-wrap gap-4">
@@ -82,10 +104,18 @@
             <h2 class="text-2xl font-bold text-center text-yellow-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestra Barbería</h2>
             
             <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(1).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(2).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(3).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg"><img src="img/barberia/foto(4).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 0)">
+                    <img src="img/barberia/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 1)">
+                    <img src="img/barberia/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 2)">
+                    <img src="img/barberia/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 3)">
+                    <img src="img/barberia/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-yellow-600 mb-16">
@@ -119,8 +149,14 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 pt-2">
-                        <input type="date" id="fechaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
-                        <input type="time" id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1 ml-1">Fecha</label>
+                            <input type="date" id="fechaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
+                            <input type="time" id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                        </div>
                     </div>
 
                     <div class="mt-6 p-4 mensaje-barberia border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
@@ -144,10 +180,18 @@
             <h2 class="text-2xl font-bold text-center text-pink-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestro Trabajo en Uñas</h2>
             
             <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(1).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(2).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(3).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg"><img src="img/unas/unas(4).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 0)">
+                    <img src="img/unas/unas(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 1)">
+                    <img src="img/unas/unas(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 2)">
+                    <img src="img/unas/unas(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 3)">
+                    <img src="img/unas/unas(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-pink-600 mb-16">
@@ -185,8 +229,14 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 pt-2">
-                        <input type="date" id="fechaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
-                        <input type="time" id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1 ml-1">Fecha</label>
+                            <input type="date" id="fechaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
+                            <input type="time" id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                        </div>
                     </div>
 
                     <div class="mt-6 p-4 mensaje-unas border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
@@ -210,10 +260,18 @@
             <h2 class="text-2xl font-bold text-center text-blue-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">La Experiencia Completa</h2>
             
             <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(1).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(2).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(3).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg"><img src="img/ambos/foto(4).jpg" loading="lazy" class="w-full h-full object-cover text-xs text-center p-4"></div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 0)">
+                    <img src="img/ambos/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 1)">
+                    <img src="img/ambos/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 2)">
+                    <img src="img/ambos/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
+                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 3)">
+                    <img src="img/ambos/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                </div>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-blue-600 mb-16">
@@ -286,16 +344,28 @@
                         <div id="boxFechaA">
                             <label id="labelFechaA" class="block text-blue-400 text-sm mb-2 text-center">Selecciona Fecha y Hora del Combo</label>
                             <div class="grid grid-cols-2 gap-4">
-                                <input type="date" id="fechaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
-                                <input type="time" id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Fecha</label>
+                                    <input type="date" id="fechaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Hora</label>
+                                    <input type="time" id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                                </div>
                             </div>
                         </div>
 
                         <div id="boxFechaU" class="hidden mt-4 pt-4 border-t border-gray-700">
                             <label class="block text-pink-400 text-sm mb-2 text-center">Fecha y Hora para Manicura/Pedicura</label>
                             <div class="grid grid-cols-2 gap-4">
-                                <input type="date" id="fechaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
-                                <input type="time" id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Fecha</label>
+                                    <input type="date" id="fechaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Hora</label>
+                                    <input type="time" id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -456,13 +526,10 @@
             btn.innerText = "Procesando cita...";
             btn.disabled = true;
 
-            // ¡CORRECCIÓN AQUÍ!: Dejamos 'datos' vacío al inicio. 
-            // Ya NO se le inyecta el número de la barbería al Excel.
             let datos = {};
 
             if (tipo === 'barberia') {
                 datos.nombre = document.getElementById('nomB').value;
-                // Captura el número del cliente
                 datos.celular = document.getElementById('telB').value;
                 datos.servicio = document.getElementById('servB').value;
                 datos.profesional = document.querySelector('input[name="profB"]:checked').value;
@@ -470,7 +537,6 @@
                 datos.hora = document.getElementById('horaB').value;
             } else if (tipo === 'unas') {
                 datos.nombre = document.getElementById('nomU').value;
-                // Captura el número del cliente
                 datos.celular = document.getElementById('telU').value;
                 datos.servicio = document.getElementById('servU').value;
                 datos.profesional = document.querySelector('input[name="profU"]:checked').value;
@@ -478,7 +544,6 @@
                 datos.hora = document.getElementById('horaU').value;
             } else if (tipo === 'ambos') {
                 datos.nombre = document.getElementById('nomA').value;
-                // Captura el número del cliente
                 datos.celular = document.getElementById('telA').value;
                 datos.servicio = document.getElementById('servAB').value + " + " + document.getElementById('servAU').value;
                 datos.profesional = document.querySelector('input[name="profAB"]:checked').value + " y " + document.querySelector('input[name="profAU"]:checked').value;
@@ -510,7 +575,6 @@
                 });
 
                 setTimeout(() => {
-                    // ¡CORRECCIÓN AQUÍ!: Se usa la variable TELEFONO directa para abrir tu chat y se incluye el celular del cliente en el mensaje
                     const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A%0A_(Quedo atento a la confirmación de disponibilidad)_`;
                     window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
@@ -530,6 +594,53 @@
                 btn.innerText = textoOriginal;
                 btn.disabled = false;
             }
+        }
+
+        // --- LÓGICA DEL LIGHTBOX (Galería) ---
+        let currentGroup = '';
+        let currentIndex = 0;
+        let imagesList = [];
+
+        function abrirLightbox(grupo, indice) {
+            currentGroup = grupo;
+            currentIndex = indice;
+            
+            // Busca las imágenes dentro de la sección activa usando la clase galeria-img
+            const imgs = document.querySelectorAll(`#vista-${grupo} .galeria-img`);
+            imagesList = Array.from(imgs).map(img => img.src);
+            
+            const lightbox = document.getElementById('lightbox');
+            const closeBtn = document.getElementById('lb-close');
+            const prevBtn = document.getElementById('lb-prev');
+            const nextBtn = document.getElementById('lb-next');
+            
+            // Limpia colores anteriores
+            const colorClasses = ['text-yellow-500', 'text-pink-500', 'text-blue-500', 'text-white'];
+            [closeBtn, prevBtn, nextBtn].forEach(btn => {
+                btn.classList.remove(...colorClasses);
+                // Asigna color según la sección
+                if(grupo === 'barberia') btn.classList.add('text-yellow-500');
+                else if(grupo === 'unas') btn.classList.add('text-pink-500');
+                else if(grupo === 'ambos') btn.classList.add('text-blue-500');
+                else btn.classList.add('text-white');
+            });
+
+            document.getElementById('lb-imagen').src = imagesList[currentIndex];
+            lightbox.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Bloquea scroll
+        }
+
+        function cerrarLightbox() {
+            document.getElementById('lightbox').classList.add('hidden');
+            document.body.style.overflow = 'auto'; // Reactiva scroll
+        }
+
+        function cambiarFoto(dir, event) {
+            if(event) event.stopPropagation(); // Evita que el clic cierre el lightbox
+            currentIndex += dir;
+            if (currentIndex >= imagesList.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = imagesList.length - 1;
+            document.getElementById('lb-imagen').src = imagesList[currentIndex];
         }
     </script>
 </body>
