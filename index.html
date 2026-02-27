@@ -42,6 +42,9 @@
             max-height: 85vh;
             max-width: 90vw;
         }
+        /* Ocultar barra de scroll en los carruseles pero permitir deslizamiento */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans relative">
@@ -104,19 +107,25 @@
         <div id="vista-barberia" class="hidden">
             <h2 class="text-2xl font-bold text-center text-yellow-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestra Barbería</h2>
             
-            <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 0)">
-                    <img src="img/barberia/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+            <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
+                <button onclick="moverCarrusel('carrusel-barberia', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
+                
+                <div id="carrusel-barberia" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 0)">
+                        <img src="img/barberia/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 1)">
+                        <img src="img/barberia/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 2)">
+                        <img src="img/barberia/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 3)">
+                        <img src="img/barberia/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
                 </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 1)">
-                    <img src="img/barberia/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 2)">
-                    <img src="img/barberia/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('barberia', 3)">
-                    <img src="img/barberia/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
+
+                <button onclick="moverCarrusel('carrusel-barberia', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-yellow-600 mb-16">
@@ -156,7 +165,52 @@
                         </div>
                         <div>
                             <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
-                            <input type="time" id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                            <select id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none cursor-pointer">
+                                <option value="" disabled selected>Elegir hora...</option>
+                                <option value="09:30 AM" data-time="09:30">09:30 AM</option>
+                                <option value="09:45 AM" data-time="09:45">09:45 AM</option>
+                                <option value="10:00 AM" data-time="10:00">10:00 AM</option>
+                                <option value="10:15 AM" data-time="10:15">10:15 AM</option>
+                                <option value="10:30 AM" data-time="10:30">10:30 AM</option>
+                                <option value="10:45 AM" data-time="10:45">10:45 AM</option>
+                                <option value="11:00 AM" data-time="11:00">11:00 AM</option>
+                                <option value="11:15 AM" data-time="11:15">11:15 AM</option>
+                                <option value="11:30 AM" data-time="11:30">11:30 AM</option>
+                                <option value="11:45 AM" data-time="11:45">11:45 AM</option>
+                                <option value="12:00 PM" data-time="12:00">12:00 PM</option>
+                                <option value="12:15 PM" data-time="12:15">12:15 PM</option>
+                                <option value="12:30 PM" data-time="12:30">12:30 PM</option>
+                                <option value="12:45 PM" data-time="12:45">12:45 PM</option>
+                                <option value="01:00 PM" data-time="13:00">01:00 PM</option>
+                                <option value="01:15 PM" data-time="13:15">01:15 PM</option>
+                                <option value="01:30 PM" data-time="13:30">01:30 PM</option>
+                                <option value="01:45 PM" data-time="13:45">01:45 PM</option>
+                                <option value="02:00 PM" data-time="14:00">02:00 PM</option>
+                                <option value="02:15 PM" data-time="14:15">02:15 PM</option>
+                                <option value="02:30 PM" data-time="14:30">02:30 PM</option>
+                                <option value="02:45 PM" data-time="14:45">02:45 PM</option>
+                                <option value="03:00 PM" data-time="15:00">03:00 PM</option>
+                                <option value="03:15 PM" data-time="15:15">03:15 PM</option>
+                                <option value="03:30 PM" data-time="15:30">03:30 PM</option>
+                                <option value="03:45 PM" data-time="15:45">03:45 PM</option>
+                                <option value="04:00 PM" data-time="16:00">04:00 PM</option>
+                                <option value="04:15 PM" data-time="16:15">04:15 PM</option>
+                                <option value="04:30 PM" data-time="16:30">04:30 PM</option>
+                                <option value="04:45 PM" data-time="16:45">04:45 PM</option>
+                                <option value="05:00 PM" data-time="17:00">05:00 PM</option>
+                                <option value="05:15 PM" data-time="17:15">05:15 PM</option>
+                                <option value="05:30 PM" data-time="17:30">05:30 PM</option>
+                                <option value="05:45 PM" data-time="17:45">05:45 PM</option>
+                                <option value="06:00 PM" data-time="18:00">06:00 PM</option>
+                                <option value="06:15 PM" data-time="18:15">06:15 PM</option>
+                                <option value="06:30 PM" data-time="18:30">06:30 PM</option>
+                                <option value="06:45 PM" data-time="18:45">06:45 PM</option>
+                                <option value="07:00 PM" data-time="19:00">07:00 PM</option>
+                                <option value="07:15 PM" data-time="19:15">07:15 PM</option>
+                                <option value="07:30 PM" data-time="19:30">07:30 PM</option>
+                                <option value="07:45 PM" data-time="19:45">07:45 PM</option>
+                                <option value="08:00 PM" data-time="20:00">08:00 PM</option>
+                            </select>
                         </div>
                     </div>
 
@@ -180,34 +234,40 @@
         <div id="vista-unas" class="hidden">
             <h2 class="text-2xl font-bold text-center text-pink-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestro Trabajo en Uñas</h2>
             
-            <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 0)">
-                    <img src="img/unas/unas(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+            <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
+                <button onclick="moverCarrusel('carrusel-unas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
+                
+                <div id="carrusel-unas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 0)">
+                        <img src="img/unas/unas(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 1)">
+                        <img src="img/unas/unas(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 2)">
+                        <img src="img/unas/unas(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 3)">
+                        <img src="img/unas/unas(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 4)">
+                        <img src="img/unas/unas(5).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 5)">
+                        <img src="img/unas/unas(6).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 6)">
+                        <img src="img/unas/unas(7).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 7)">
+                        <img src="img/unas/unas(8).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 8)">
+                        <img src="img/unas/unas(9).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
                 </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 1)">
-                    <img src="img/unas/unas(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 2)">
-                    <img src="img/unas/unas(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 3)">
-                    <img src="img/unas/unas(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-		<div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 4)">
-                    <img src="img/unas/unas(5).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-		<div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 5)">
-                    <img src="img/unas/unas(6).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-		<div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 6)">
-                    <img src="img/unas/unas(7).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-		<div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 7)">
-                    <img src="img/unas/unas(8).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-		<div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('unas', 8)">
-                    <img src="img/unas/unas(9).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
+
+                <button onclick="moverCarrusel('carrusel-unas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-pink-600 mb-16">
@@ -251,7 +311,52 @@
                         </div>
                         <div>
                             <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
-                            <input type="time" id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                            <select id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none cursor-pointer">
+                                <option value="" disabled selected>Elegir hora...</option>
+                                <option value="09:30 AM" data-time="09:30">09:30 AM</option>
+                                <option value="09:45 AM" data-time="09:45">09:45 AM</option>
+                                <option value="10:00 AM" data-time="10:00">10:00 AM</option>
+                                <option value="10:15 AM" data-time="10:15">10:15 AM</option>
+                                <option value="10:30 AM" data-time="10:30">10:30 AM</option>
+                                <option value="10:45 AM" data-time="10:45">10:45 AM</option>
+                                <option value="11:00 AM" data-time="11:00">11:00 AM</option>
+                                <option value="11:15 AM" data-time="11:15">11:15 AM</option>
+                                <option value="11:30 AM" data-time="11:30">11:30 AM</option>
+                                <option value="11:45 AM" data-time="11:45">11:45 AM</option>
+                                <option value="12:00 PM" data-time="12:00">12:00 PM</option>
+                                <option value="12:15 PM" data-time="12:15">12:15 PM</option>
+                                <option value="12:30 PM" data-time="12:30">12:30 PM</option>
+                                <option value="12:45 PM" data-time="12:45">12:45 PM</option>
+                                <option value="01:00 PM" data-time="13:00">01:00 PM</option>
+                                <option value="01:15 PM" data-time="13:15">01:15 PM</option>
+                                <option value="01:30 PM" data-time="13:30">01:30 PM</option>
+                                <option value="01:45 PM" data-time="13:45">01:45 PM</option>
+                                <option value="02:00 PM" data-time="14:00">02:00 PM</option>
+                                <option value="02:15 PM" data-time="14:15">02:15 PM</option>
+                                <option value="02:30 PM" data-time="14:30">02:30 PM</option>
+                                <option value="02:45 PM" data-time="14:45">02:45 PM</option>
+                                <option value="03:00 PM" data-time="15:00">03:00 PM</option>
+                                <option value="03:15 PM" data-time="15:15">03:15 PM</option>
+                                <option value="03:30 PM" data-time="15:30">03:30 PM</option>
+                                <option value="03:45 PM" data-time="15:45">03:45 PM</option>
+                                <option value="04:00 PM" data-time="16:00">04:00 PM</option>
+                                <option value="04:15 PM" data-time="16:15">04:15 PM</option>
+                                <option value="04:30 PM" data-time="16:30">04:30 PM</option>
+                                <option value="04:45 PM" data-time="16:45">04:45 PM</option>
+                                <option value="05:00 PM" data-time="17:00">05:00 PM</option>
+                                <option value="05:15 PM" data-time="17:15">05:15 PM</option>
+                                <option value="05:30 PM" data-time="17:30">05:30 PM</option>
+                                <option value="05:45 PM" data-time="17:45">05:45 PM</option>
+                                <option value="06:00 PM" data-time="18:00">06:00 PM</option>
+                                <option value="06:15 PM" data-time="18:15">06:15 PM</option>
+                                <option value="06:30 PM" data-time="18:30">06:30 PM</option>
+                                <option value="06:45 PM" data-time="18:45">06:45 PM</option>
+                                <option value="07:00 PM" data-time="19:00">07:00 PM</option>
+                                <option value="07:15 PM" data-time="19:15">07:15 PM</option>
+                                <option value="07:30 PM" data-time="19:30">07:30 PM</option>
+                                <option value="07:45 PM" data-time="19:45">07:45 PM</option>
+                                <option value="08:00 PM" data-time="20:00">08:00 PM</option>
+                            </select>
                         </div>
                     </div>
 
@@ -275,19 +380,25 @@
         <div id="vista-ambos" class="hidden">
             <h2 class="text-2xl font-bold text-center text-blue-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">La Experiencia Completa</h2>
             
-            <section class="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 0)">
-                    <img src="img/ambos/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+            <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
+                <button onclick="moverCarrusel('carrusel-ambos', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-blue-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
+                
+                <div id="carrusel-ambos" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 0)">
+                        <img src="img/ambos/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 1)">
+                        <img src="img/ambos/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 2)">
+                        <img src="img/ambos/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 3)">
+                        <img src="img/ambos/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
+                    </div>
                 </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 1)">
-                    <img src="img/ambos/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 2)">
-                    <img src="img/ambos/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
-                <div class="bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer" onclick="abrirLightbox('ambos', 3)">
-                    <img src="img/ambos/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                </div>
+
+                <button onclick="moverCarrusel('carrusel-ambos', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-blue-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-blue-600 mb-16">
@@ -367,7 +478,52 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1">Hora</label>
-                                    <input type="time" id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
+                                    <select id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none cursor-pointer">
+                                        <option value="" disabled selected>Elegir hora...</option>
+                                        <option value="09:30 AM" data-time="09:30">09:30 AM</option>
+                                        <option value="09:45 AM" data-time="09:45">09:45 AM</option>
+                                        <option value="10:00 AM" data-time="10:00">10:00 AM</option>
+                                        <option value="10:15 AM" data-time="10:15">10:15 AM</option>
+                                        <option value="10:30 AM" data-time="10:30">10:30 AM</option>
+                                        <option value="10:45 AM" data-time="10:45">10:45 AM</option>
+                                        <option value="11:00 AM" data-time="11:00">11:00 AM</option>
+                                        <option value="11:15 AM" data-time="11:15">11:15 AM</option>
+                                        <option value="11:30 AM" data-time="11:30">11:30 AM</option>
+                                        <option value="11:45 AM" data-time="11:45">11:45 AM</option>
+                                        <option value="12:00 PM" data-time="12:00">12:00 PM</option>
+                                        <option value="12:15 PM" data-time="12:15">12:15 PM</option>
+                                        <option value="12:30 PM" data-time="12:30">12:30 PM</option>
+                                        <option value="12:45 PM" data-time="12:45">12:45 PM</option>
+                                        <option value="01:00 PM" data-time="13:00">01:00 PM</option>
+                                        <option value="01:15 PM" data-time="13:15">01:15 PM</option>
+                                        <option value="01:30 PM" data-time="13:30">01:30 PM</option>
+                                        <option value="01:45 PM" data-time="13:45">01:45 PM</option>
+                                        <option value="02:00 PM" data-time="14:00">02:00 PM</option>
+                                        <option value="02:15 PM" data-time="14:15">02:15 PM</option>
+                                        <option value="02:30 PM" data-time="14:30">02:30 PM</option>
+                                        <option value="02:45 PM" data-time="14:45">02:45 PM</option>
+                                        <option value="03:00 PM" data-time="15:00">03:00 PM</option>
+                                        <option value="03:15 PM" data-time="15:15">03:15 PM</option>
+                                        <option value="03:30 PM" data-time="15:30">03:30 PM</option>
+                                        <option value="03:45 PM" data-time="15:45">03:45 PM</option>
+                                        <option value="04:00 PM" data-time="16:00">04:00 PM</option>
+                                        <option value="04:15 PM" data-time="16:15">04:15 PM</option>
+                                        <option value="04:30 PM" data-time="16:30">04:30 PM</option>
+                                        <option value="04:45 PM" data-time="16:45">04:45 PM</option>
+                                        <option value="05:00 PM" data-time="17:00">05:00 PM</option>
+                                        <option value="05:15 PM" data-time="17:15">05:15 PM</option>
+                                        <option value="05:30 PM" data-time="17:30">05:30 PM</option>
+                                        <option value="05:45 PM" data-time="17:45">05:45 PM</option>
+                                        <option value="06:00 PM" data-time="18:00">06:00 PM</option>
+                                        <option value="06:15 PM" data-time="18:15">06:15 PM</option>
+                                        <option value="06:30 PM" data-time="18:30">06:30 PM</option>
+                                        <option value="06:45 PM" data-time="18:45">06:45 PM</option>
+                                        <option value="07:00 PM" data-time="19:00">07:00 PM</option>
+                                        <option value="07:15 PM" data-time="19:15">07:15 PM</option>
+                                        <option value="07:30 PM" data-time="19:30">07:30 PM</option>
+                                        <option value="07:45 PM" data-time="19:45">07:45 PM</option>
+                                        <option value="08:00 PM" data-time="20:00">08:00 PM</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -382,7 +538,52 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1">Hora</label>
-                                    <input type="time" id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
+                                    <select id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none cursor-pointer">
+                                        <option value="" disabled selected>Elegir hora...</option>
+                                        <option value="09:30 AM" data-time="09:30">09:30 AM</option>
+                                        <option value="09:45 AM" data-time="09:45">09:45 AM</option>
+                                        <option value="10:00 AM" data-time="10:00">10:00 AM</option>
+                                        <option value="10:15 AM" data-time="10:15">10:15 AM</option>
+                                        <option value="10:30 AM" data-time="10:30">10:30 AM</option>
+                                        <option value="10:45 AM" data-time="10:45">10:45 AM</option>
+                                        <option value="11:00 AM" data-time="11:00">11:00 AM</option>
+                                        <option value="11:15 AM" data-time="11:15">11:15 AM</option>
+                                        <option value="11:30 AM" data-time="11:30">11:30 AM</option>
+                                        <option value="11:45 AM" data-time="11:45">11:45 AM</option>
+                                        <option value="12:00 PM" data-time="12:00">12:00 PM</option>
+                                        <option value="12:15 PM" data-time="12:15">12:15 PM</option>
+                                        <option value="12:30 PM" data-time="12:30">12:30 PM</option>
+                                        <option value="12:45 PM" data-time="12:45">12:45 PM</option>
+                                        <option value="01:00 PM" data-time="13:00">01:00 PM</option>
+                                        <option value="01:15 PM" data-time="13:15">01:15 PM</option>
+                                        <option value="01:30 PM" data-time="13:30">01:30 PM</option>
+                                        <option value="01:45 PM" data-time="13:45">01:45 PM</option>
+                                        <option value="02:00 PM" data-time="14:00">02:00 PM</option>
+                                        <option value="02:15 PM" data-time="14:15">02:15 PM</option>
+                                        <option value="02:30 PM" data-time="14:30">02:30 PM</option>
+                                        <option value="02:45 PM" data-time="14:45">02:45 PM</option>
+                                        <option value="03:00 PM" data-time="15:00">03:00 PM</option>
+                                        <option value="03:15 PM" data-time="15:15">03:15 PM</option>
+                                        <option value="03:30 PM" data-time="15:30">03:30 PM</option>
+                                        <option value="03:45 PM" data-time="15:45">03:45 PM</option>
+                                        <option value="04:00 PM" data-time="16:00">04:00 PM</option>
+                                        <option value="04:15 PM" data-time="16:15">04:15 PM</option>
+                                        <option value="04:30 PM" data-time="16:30">04:30 PM</option>
+                                        <option value="04:45 PM" data-time="16:45">04:45 PM</option>
+                                        <option value="05:00 PM" data-time="17:00">05:00 PM</option>
+                                        <option value="05:15 PM" data-time="17:15">05:15 PM</option>
+                                        <option value="05:30 PM" data-time="17:30">05:30 PM</option>
+                                        <option value="05:45 PM" data-time="17:45">05:45 PM</option>
+                                        <option value="06:00 PM" data-time="18:00">06:00 PM</option>
+                                        <option value="06:15 PM" data-time="18:15">06:15 PM</option>
+                                        <option value="06:30 PM" data-time="18:30">06:30 PM</option>
+                                        <option value="06:45 PM" data-time="18:45">06:45 PM</option>
+                                        <option value="07:00 PM" data-time="19:00">07:00 PM</option>
+                                        <option value="07:15 PM" data-time="19:15">07:15 PM</option>
+                                        <option value="07:30 PM" data-time="19:30">07:30 PM</option>
+                                        <option value="07:45 PM" data-time="19:45">07:45 PM</option>
+                                        <option value="08:00 PM" data-time="20:00">08:00 PM</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -456,6 +657,7 @@
                         const diaSemana = fechaObj.getDay(); 
 
                         let horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+                        let minTimeStr = horaApertura;
 
                         if (fechaSeleccionadaStr === fechaHoyStr) {
                             const horasActual = String(ahora.getHours()).padStart(2, '0');
@@ -463,18 +665,34 @@
                             const horaActualStr = `${horasActual}:${minutosActual}`;
 
                             if (horaActualStr > horaApertura) {
-                                inputHora.min = horaActualStr;
-                            } else {
-                                inputHora.min = horaApertura;
+                                minTimeStr = horaActualStr;
                             }
-                        } else {
-                            inputHora.min = horaApertura;
                         }
-                        
-                        inputHora.max = "20:00";
+
+                        // Filtrar opciones pasadas si es hoy
+                        Array.from(inputHora.options).forEach(opt => {
+                            if(opt.dataset.time) {
+                                if(opt.dataset.time < minTimeStr) {
+                                    opt.disabled = true;
+                                    opt.style.display = 'none';
+                                } else {
+                                    opt.disabled = false;
+                                    opt.style.display = '';
+                                }
+                            }
+                        });
+
+                        // Limpiar selección si la hora actual ya pasó
+                        if(inputHora.selectedOptions.length > 0 && inputHora.selectedOptions[0].disabled) {
+                            inputHora.value = "";
+                        }
                     });
                 }
             });
+
+            // INICIAR AUTO-SCROLL
+            iniciarAutoScroll();
+            configurarPausaCarrusel();
         };
 
         function mostrarSeccion(seccion) {
@@ -614,7 +832,7 @@
             }
         }
 
-        // --- LÓGICA DEL LIGHTBOX (Galería) ---
+        // --- LÓGICA DEL LIGHTBOX (Galería a Pantalla Completa) ---
         let currentGroup = '';
         let currentIndex = 0;
         let imagesList = [];
@@ -623,7 +841,6 @@
             currentGroup = grupo;
             currentIndex = indice;
             
-            // Busca las imágenes dentro de la sección activa usando la clase galeria-img
             const imgs = document.querySelectorAll(`#vista-${grupo} .galeria-img`);
             imagesList = Array.from(imgs).map(img => img.src);
             
@@ -632,11 +849,9 @@
             const prevBtn = document.getElementById('lb-prev');
             const nextBtn = document.getElementById('lb-next');
             
-            // Limpia colores anteriores
             const colorClasses = ['text-yellow-500', 'text-pink-500', 'text-blue-500', 'text-white'];
             [closeBtn, prevBtn, nextBtn].forEach(btn => {
                 btn.classList.remove(...colorClasses);
-                // Asigna color según la sección
                 if(grupo === 'barberia') btn.classList.add('text-yellow-500');
                 else if(grupo === 'unas') btn.classList.add('text-pink-500');
                 else if(grupo === 'ambos') btn.classList.add('text-blue-500');
@@ -645,21 +860,76 @@
 
             document.getElementById('lb-imagen').src = imagesList[currentIndex];
             lightbox.classList.remove('hidden');
-            document.body.style.overflow = 'hidden'; // Bloquea scroll
+            document.body.style.overflow = 'hidden'; 
+            pausarAutoScroll(); // Pausa el carrusel de fondo al abrir imagen
         }
 
         function cerrarLightbox() {
             document.getElementById('lightbox').classList.add('hidden');
-            document.body.style.overflow = 'auto'; // Reactiva scroll
+            document.body.style.overflow = 'auto'; 
+            reanudarAutoScroll(); // Reanuda al cerrar
         }
 
         function cambiarFoto(dir, event) {
-            if(event) event.stopPropagation(); // Evita que el clic cierre el lightbox
+            if(event) event.stopPropagation(); 
             currentIndex += dir;
             if (currentIndex >= imagesList.length) currentIndex = 0;
             if (currentIndex < 0) currentIndex = imagesList.length - 1;
             document.getElementById('lb-imagen').src = imagesList[currentIndex];
         }
+
+        // --- LÓGICA DE AUTO-SCROLL Y PAUSA TÁCTIL ---
+        let intervaloAutoScroll;
+
+        function iniciarAutoScroll() {
+            intervaloAutoScroll = setInterval(() => {
+                ['carrusel-barberia', 'carrusel-unas', 'carrusel-ambos'].forEach(id => {
+                    const contenedor = document.getElementById(id);
+                    if (contenedor && !contenedor.closest('.hidden')) {
+                        const elemento = contenedor.querySelector('div');
+                        if (elemento) {
+                            const itemWidth = elemento.offsetWidth + 16; 
+                            if (contenedor.scrollLeft + contenedor.clientWidth >= contenedor.scrollWidth - 10) {
+                                contenedor.scrollTo({ left: 0, behavior: 'smooth' }); 
+                            } else {
+                                contenedor.scrollBy({ left: itemWidth, behavior: 'smooth' }); 
+                            }
+                        }
+                    }
+                });
+            }, 3000); 
+        }
+
+        function pausarAutoScroll() {
+            clearInterval(intervaloAutoScroll);
+        }
+
+        function reanudarAutoScroll() {
+            pausarAutoScroll(); 
+            iniciarAutoScroll();
+        }
+
+        function configurarPausaCarrusel() {
+            ['carrusel-barberia', 'carrusel-unas', 'carrusel-ambos'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('mouseenter', pausarAutoScroll);
+                    el.addEventListener('mouseleave', reanudarAutoScroll);
+                    el.addEventListener('touchstart', pausarAutoScroll, {passive: true});
+                    el.addEventListener('touchend', reanudarAutoScroll);
+                }
+            });
+        }
+
+        function moverCarrusel(id, direccion) {
+            const contenedor = document.getElementById(id);
+            if(contenedor) {
+                const elemento = contenedor.querySelector('div');
+                const itemWidth = elemento.offsetWidth + 16; 
+                contenedor.scrollBy({ left: itemWidth * direccion, behavior: 'smooth' });
+            }
+            reanudarAutoScroll(); // Reinicia el tiempo para que no salte de golpe tras presionar el botón
+        }
     </script>
 </body>
-</html>
+</html> 
