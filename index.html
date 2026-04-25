@@ -21,6 +21,53 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
+            authDomain: "amsterdam-barber-club.firebaseapp.com",
+            projectId: "amsterdam-barber-club",
+            storageBucket: "amsterdam-barber-club.firebasestorage.app",
+            messagingSenderId: "520214344037",
+            appId: "1:520214344037:web:3c8e6ea2bfa10bac91b18c",
+            measurementId: "G-HHX3QVXEQJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore();
+
+        window.addEventListener('load', () => {
+            onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    
+                    // Generar opciones para los selectores (formato moneda Colombia)
+                    const opcionesBarberia = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
+                        data.barberia.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
+                    
+                    const opcionesUnas = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
+                        data.unas.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
+
+                    // Inyectar en formulario Barbería
+                    const servB = document.getElementById('servB');
+                    if(servB) servB.innerHTML = opcionesBarberia;
+
+                    // Inyectar en formulario Uñas
+                    const servU = document.getElementById('servU');
+                    if(servU) servU.innerHTML = opcionesUnas;
+
+                    // Inyectar en formulario Combo Ambos
+                    const servAB = document.getElementById('servAB');
+                    if(servAB) servAB.innerHTML = opcionesBarberia;
+                    
+                    const servAU = document.getElementById('servAU');
+                    if(servAU) servAU.innerHTML = opcionesUnas;
+                }
+            });
+        });
+    </script>
     <style>
         .mensaje-barberia {
             background: linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1));
@@ -135,11 +182,8 @@
                     
                     <input type="tel" id="telB" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
                     
-                    <select id="servB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
-                        <option value="" disabled selected>Selecciona un servicio...</option>
-                        <option value="Corte Caballero - $19.000">Corte Caballero ($19.000)</option>
-                        <option value="Corte y Barba - $25.000">Corte y Barba ($25.000)</option>
-                        <option value="Barba - $10.000">Barba ($10.000)</option>
+                    <select id="servB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none cursor-pointer">
+                        <option value="" disabled selected>Sincronizando servicios en vivo...</option>
                     </select>
 
                     <div class="pt-2">
@@ -277,15 +321,8 @@
                     
                     <input type="tel" id="telU" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     
-                    <select id="servU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
-                        <option value="" disabled selected>Selecciona un servicio...</option>
-                        <option value="Tradicional - $17.000">Tradicional ($17.000)</option>
-                        <option value="Semi-Permanente - $35.000">Semi-Permanente ($35.000)</option>
-                        <option value="Semi + Base Rubber - $50.000">Semi + Base Rubber ($50.000)</option>
-                        <option value="Dipping - $50.000">Dipping ($50.000)</option>
-                        <option value="Press-On - $70.000">Press-On ($70.000)</option>
-                        <option value="Polygel - $80.000">Polygel ($80.000)</option>
-                        <option value="Acrílicas - $110.000">Acrílicas ($110.000)</option>
+                    <select id="servU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none cursor-pointer">
+                        <option value="" disabled selected>Sincronizando servicios en vivo...</option>
                     </select>
 
                     <div class="pt-2">
@@ -410,11 +447,8 @@
                     
                     <div class="p-4 border border-yellow-600 rounded-lg">
                         <label class="block text-yellow-500 font-bold mb-3 text-center">1. Servicio de Barbería</label>
-                        <select id="servAB" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-yellow-500 outline-none">
-                            <option value="" disabled selected>Selecciona corte/barba...</option>
-                            <option value="Corte Caballero - $19.000">Corte Caballero ($19.000)</option>
-                            <option value="Corte y Barba - $25.000">Corte y Barba ($25.000)</option>
-                            <option value="Barba - $10.000">Barba ($10.000)</option>
+                        <select id="servAB" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-yellow-500 outline-none cursor-pointer">
+                            <option value="" disabled selected>Sincronizando servicios en vivo...</option>
                         </select>
                         
                         <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
@@ -435,15 +469,8 @@
 
                     <div class="p-4 border border-pink-600 rounded-lg">
                         <label class="block text-pink-500 font-bold mb-3 text-center">2. Manicura & Pedicura</label>
-                        <select id="servAU" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
-                            <option value="" disabled selected>Selecciona servicio...</option>
-                            <option value="Tradicional - $17.000">Tradicional ($17.000)</option>
-                            <option value="Semi-Permanente - $35.000">Semi-Permanente ($35.000)</option>
-                            <option value="Semi + Base Rubber - $50.000">Semi + Base Rubber ($50.000)</option>
-                            <option value="Dipping - $50.000">Dipping ($50.000)</option>
-                            <option value="Press-On - $70.000">Press-On ($70.000)</option>
-                            <option value="Polygel - $80.000">Polygel ($80.000)</option>
-                            <option value="Acrílicas - $110.000">Acrílicas ($110.000)</option>
+                        <select id="servAU" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none cursor-pointer">
+                            <option value="" disabled selected>Sincronizando servicios en vivo...</option>
                         </select>
                         
                         <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
@@ -608,7 +635,12 @@
 
     </div>
 
-    <footer class="bg-gray-950 border-t border-gray-800 py-8 mt-12 pb-24 text-center">
+    <footer class="bg-gray-950 border-t border-gray-800 py-12 mt-12 pb-32 text-center">
+        <div class="mb-8">
+            <a href="admin.html" class="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-gray-600 hover:text-yellow-500 transition-colors border border-gray-800 hover:border-yellow-600/30 px-4 py-2 rounded-full">
+                <span>⚙️</span> Acceso Administrativo
+            </a>
+        </div>
         <p class="text-gray-400 text-sm">© 2026 CARLOS SILVA</p>
         <p class="text-gray-400 text-sm">+57 3145586557</p>
     </footer>
@@ -932,4 +964,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
