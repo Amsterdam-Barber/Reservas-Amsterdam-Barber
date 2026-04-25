@@ -52,16 +52,13 @@
             }
         });
 
-        // --- EL CAMBIO CLAVE ESTÁ AQUÍ ---
         function escucharDatos() {
             onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
-                // Verificamos si existe el documento Y si tiene la lista de barbería real
                 if (snapshot.exists() && snapshot.data().barberia) {
                     const data = snapshot.data();
                     renderizarInterfaz(data);
                     actualizarEstadisticas(data.stats || { barberia: 50, unas: 50 });
                 } else {
-                    // Si solo tiene el "iniciado: si", lo sobreescribimos con la estructura real
                     inicializarNegocio();
                 }
             });
@@ -78,16 +75,16 @@
                     { nombre: "Semi-Permanente", precio: 35000 }
                 ],
                 equipo: {
-                    barberia: ["Santiago", "Armando"],
-                    unas: ["Valentina", "Anguie"]
+                    barberia: [{ nombre: "Santiago", foto: "img/equipo/santiago.jpg" }, { nombre: "Armando", foto: "img/equipo/armando.jpg" }],
+                    unas: [{ nombre: "Valentina", foto: "img/equipo/valentina.jpg" }, { nombre: "Anguie", foto: "img/equipo/anguie.jpg" }]
                 },
                 stats: { barberia: 50, unas: 50 }
             };
-            // Guardamos la estructura forzando a que se cree correctamente
             await setDoc(doc(db, "configuracion", "negocio"), base);
         }
 
         function renderizarInterfaz(data) {
+            // Renderizar Servicios
             document.getElementById('lista-barberia').innerHTML = data.barberia.map((s, i) => `
                 <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
                     <input type="text" value="${s.nombre}" onchange="cambiarServicio('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-yellow-500">
@@ -103,8 +100,30 @@
                     <button onclick="eliminarServicio('unas', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
                 </div>
             `).join('');
+
+            // Renderizar Equipo Barbería
+            const htmlBarberos = data.equipo.barberia.map((p, i) => `
+                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
+                    <input type="text" value="${p.nombre}" onchange="cambiarEquipo('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded w-1/3 text-sm border border-gray-600 outline-none focus:border-yellow-500" placeholder="Nombre">
+                    <input type="text" value="${p.foto}" onchange="cambiarEquipo('barberia', ${i}, 'foto', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-xs border border-gray-600 outline-none focus:border-yellow-500 text-gray-400" placeholder="Ruta foto (ej: img/equipo/foto.jpg)">
+                    <button onclick="eliminarMiembro('barberia', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
+                </div>
+            `).join('');
+
+            // Renderizar Equipo Uñas
+            const htmlManicuristas = data.equipo.unas.map((p, i) => `
+                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
+                    <input type="text" value="${p.nombre}" onchange="cambiarEquipo('unas', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded w-1/3 text-sm border border-gray-600 outline-none focus:border-pink-500" placeholder="Nombre">
+                    <input type="text" value="${p.foto}" onchange="cambiarEquipo('unas', ${i}, 'foto', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-xs border border-gray-600 outline-none focus:border-pink-500 text-gray-400" placeholder="Ruta foto (ej: img/equipo/foto.jpg)">
+                    <button onclick="eliminarMiembro('unas', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
+                </div>
+            `).join('');
+
+            if(document.getElementById('gestion-equipo-barberia')) document.getElementById('gestion-equipo-barberia').innerHTML = htmlBarberos;
+            if(document.getElementById('gestion-equipo-unas')) document.getElementById('gestion-equipo-unas').innerHTML = htmlManicuristas;
         }
 
+        // FUNCIONES PARA SERVICIOS
         window.cambiarServicio = async (cat, index, campo, valor) => {
             try {
                 const docRef = doc(db, "configuracion", "negocio");
@@ -120,7 +139,6 @@
                 const docRef = doc(db, "configuracion", "negocio");
                 const snap = await getDoc(docRef);
                 const data = snap.data();
-                // Seguro extra para garantizar que el arreglo exista
                 if (!data[cat]) data[cat] = []; 
                 data[cat].push({ nombre: "Nuevo Servicio", precio: 0 });
                 await setDoc(docRef, data);
@@ -136,6 +154,40 @@
                 data[cat].splice(index, 1);
                 await setDoc(docRef, data);
             } catch (e) { console.error("Error al eliminar:", e); }
+        };
+
+        // FUNCIONES PARA EQUIPO
+        window.cambiarEquipo = async (cat, index, campo, valor) => {
+            try {
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                data.equipo[cat][index][campo] = valor;
+                await setDoc(docRef, data);
+            } catch (e) { console.error("Error al cambiar equipo:", e); }
+        };
+
+        window.agregarMiembro = async (cat) => {
+            try {
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                if (!data.equipo) data.equipo = { barberia: [], unas: [] };
+                if (!data.equipo[cat]) data.equipo[cat] = [];
+                data.equipo[cat].push({ nombre: "Nuevo", foto: "img/equipo/default.jpg" });
+                await setDoc(docRef, data);
+            } catch (e) { console.error("Error al agregar miembro:", e); }
+        };
+
+        window.eliminarMiembro = async (cat, index) => {
+            if(!confirm("¿Estás seguro de eliminar a este colaborador?")) return;
+            try {
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                data.equipo[cat].splice(index, 1);
+                await setDoc(docRef, data);
+            } catch (e) { console.error("Error al eliminar miembro:", e); }
         };
 
         let chart;
@@ -197,59 +249,80 @@
             </div>
         </header>
 
-        <main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <main class="max-w-7xl mx-auto px-4 pb-12">
             
-            <div class="lg:col-span-2 space-y-8">
-                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold flex items-center gap-2">
-                            <span class="text-yellow-500">💈</span> Servicios de Barbería
-                        </h2>
-                        <button onclick="agregarServicio('barberia')" class="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all active:scale-95">
-                            + AGREGAR
-                        </button>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                <span class="text-yellow-500">💈</span> Servicios de Barbería
+                            </h2>
+                            <button onclick="agregarServicio('barberia')" class="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all active:scale-95">
+                                + AGREGAR
+                            </button>
+                        </div>
+                        <div id="lista-barberia"></div>
                     </div>
-                    <div id="lista-barberia"></div>
+
+                    <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                <span class="text-pink-500">💅</span> Servicios de Uñas
+                            </h2>
+                            <button onclick="agregarServicio('unas')" class="bg-pink-600/10 text-pink-500 px-4 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all active:scale-95">
+                                + AGREGAR
+                            </button>
+                        </div>
+                        <div id="lista-unas"></div>
+                    </div>
                 </div>
 
-                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold flex items-center gap-2">
-                            <span class="text-pink-500">💅</span> Servicios de Uñas
-                        </h2>
-                        <button onclick="agregarServicio('unas')" class="bg-pink-600/10 text-pink-500 px-4 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all active:scale-95">
-                            + AGREGAR
-                        </button>
+                <div class="space-y-8">
+                    <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl text-center">
+                        <h2 class="text-lg font-bold mb-6 text-gray-400">Balance de Citas</h2>
+                        <div class="max-w-[200px] mx-auto mb-6">
+                            <canvas id="ventasChart"></canvas>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 bg-gray-800/50 rounded-2xl">
+                                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Barbería</p>
+                                <span class="text-xl font-bold text-yellow-500">Sincronizado</span>
+                            </div>
+                            <div class="p-4 bg-gray-800/50 rounded-2xl">
+                                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Uñas</p>
+                                <span class="text-xl font-bold text-pink-500">Sincronizado</span>
+                            </div>
+                        </div>
                     </div>
-                    <div id="lista-unas"></div>
                 </div>
             </div>
 
-            <div class="space-y-8">
-                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl text-center">
-                    <h2 class="text-lg font-bold mb-6 text-gray-400">Balance de Citas</h2>
-                    <div class="max-w-[200px] mx-auto mb-6">
-                        <canvas id="ventasChart"></canvas>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="p-4 bg-gray-800/50 rounded-2xl">
-                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Barbería</p>
-                            <span class="text-xl font-bold text-yellow-500">Sincronizado</span>
+            <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-blue-400">
+                    <span>👥</span> Gestión de Equipo Activo
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-gray-900/50 p-6 rounded-2xl border border-yellow-600/30">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-yellow-500 text-lg">Barberos</h3>
+                            <button onclick="agregarMiembro('barberia')" class="bg-yellow-600/10 text-yellow-500 px-3 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all active:scale-95">
+                                + NUEVO
+                            </button>
                         </div>
-                        <div class="p-4 bg-gray-800/50 rounded-2xl">
-                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Uñas</p>
-                            <span class="text-xl font-bold text-pink-500">Sincronizado</span>
-                        </div>
+                        <div id="gestion-equipo-barberia"></div>
                     </div>
-                </div>
 
-                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
-                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-                        <span class="text-blue-400">👥</span> Equipo Activo
-                    </h2>
-                    <p class="text-sm text-gray-500 leading-relaxed">
-                        Actualmente gestionas a tus colaboradores desde el archivo principal. Próximamente activaremos la edición en vivo para ellos aquí.
-                    </p>
+                    <div class="bg-gray-900/50 p-6 rounded-2xl border border-pink-600/30">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-pink-500 text-lg">Manicuristas</h3>
+                            <button onclick="agregarMiembro('unas')" class="bg-pink-600/10 text-pink-500 px-3 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all active:scale-95">
+                                + NUEVA
+                            </button>
+                        </div>
+                        <div id="gestion-equipo-unas"></div>
+                    </div>
                 </div>
             </div>
 
