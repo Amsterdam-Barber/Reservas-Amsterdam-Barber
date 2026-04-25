@@ -12,7 +12,6 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Configuración oficial de tu proyecto
         const firebaseConfig = {
             apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
             authDomain: "amsterdam-barber-club.firebaseapp.com",
@@ -27,7 +26,6 @@
         const auth = getAuth();
         const db = getFirestore();
 
-        // Lógica de Inicio de Sesión
         window.login = async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('pass').value;
@@ -54,14 +52,16 @@
             }
         });
 
-        // Sincronización con la Base de Datos
+        // --- EL CAMBIO CLAVE ESTÁ AQUÍ ---
         function escucharDatos() {
             onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
-                if (snapshot.exists()) {
+                // Verificamos si existe el documento Y si tiene la lista de barbería real
+                if (snapshot.exists() && snapshot.data().barberia) {
                     const data = snapshot.data();
                     renderizarInterfaz(data);
                     actualizarEstadisticas(data.stats || { barberia: 50, unas: 50 });
                 } else {
+                    // Si solo tiene el "iniciado: si", lo sobreescribimos con la estructura real
                     inicializarNegocio();
                 }
             });
@@ -81,54 +81,61 @@
                     barberia: ["Santiago", "Armando"],
                     unas: ["Valentina", "Anguie"]
                 },
-                stats: { barberia: 0, unas: 0 }
+                stats: { barberia: 50, unas: 50 }
             };
+            // Guardamos la estructura forzando a que se cree correctamente
             await setDoc(doc(db, "configuracion", "negocio"), base);
         }
 
         function renderizarInterfaz(data) {
-            // Renderizar Barbería
             document.getElementById('lista-barberia').innerHTML = data.barberia.map((s, i) => `
-                <div class="flex gap-2 mb-3">
-                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600">
-                    <input type="number" value="${s.precio}" onchange="cambiarServicio('barberia', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-yellow-500 font-bold">
-                    <button onclick="eliminarServicio('barberia', ${i})" class="bg-red-900/50 text-red-500 px-3 rounded">✕</button>
+                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
+                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-yellow-500">
+                    <input type="number" value="${s.precio}" onchange="cambiarServicio('barberia', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-yellow-500 font-bold outline-none focus:border-yellow-500">
+                    <button onclick="eliminarServicio('barberia', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
                 </div>
             `).join('');
 
-            // Renderizar Uñas
             document.getElementById('lista-unas').innerHTML = data.unas.map((s, i) => `
-                <div class="flex gap-2 mb-3">
-                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('unas', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600">
-                    <input type="number" value="${s.precio}" onchange="cambiarServicio('unas', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-pink-500 font-bold">
-                    <button onclick="eliminarServicio('unas', ${i})" class="bg-red-900/50 text-red-500 px-3 rounded">✕</button>
+                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
+                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('unas', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-pink-500">
+                    <input type="number" value="${s.precio}" onchange="cambiarServicio('unas', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-pink-500 font-bold outline-none focus:border-pink-500">
+                    <button onclick="eliminarServicio('unas', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
                 </div>
             `).join('');
         }
 
         window.cambiarServicio = async (cat, index, campo, valor) => {
-            const docRef = doc(db, "configuracion", "negocio");
-            const snap = await getDoc(docRef);
-            const data = snap.data();
-            data[cat][index][campo] = campo === 'precio' ? parseInt(valor) : valor;
-            await setDoc(docRef, data);
+            try {
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                data[cat][index][campo] = campo === 'precio' ? parseInt(valor) || 0 : valor;
+                await setDoc(docRef, data);
+            } catch (e) { console.error("Error al cambiar:", e); }
         };
 
         window.agregarServicio = async (cat) => {
-            const docRef = doc(db, "configuracion", "negocio");
-            const snap = await getDoc(docRef);
-            const data = snap.data();
-            data[cat].push({ nombre: "Nuevo Servicio", precio: 0 });
-            await setDoc(docRef, data);
+            try {
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                // Seguro extra para garantizar que el arreglo exista
+                if (!data[cat]) data[cat] = []; 
+                data[cat].push({ nombre: "Nuevo Servicio", precio: 0 });
+                await setDoc(docRef, data);
+            } catch (e) { console.error("Error al agregar:", e); }
         };
 
         window.eliminarServicio = async (cat, index) => {
-            if(!confirm("¿Eliminar este servicio?")) return;
-            const docRef = doc(db, "configuracion", "negocio");
-            const snap = await getDoc(docRef);
-            const data = snap.data();
-            data[cat].splice(index, 1);
-            await setDoc(docRef, data);
+            if(!confirm("¿Estás seguro de eliminar este servicio?")) return;
+            try {
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                data[cat].splice(index, 1);
+                await setDoc(docRef, data);
+            } catch (e) { console.error("Error al eliminar:", e); }
         };
 
         let chart;
@@ -198,7 +205,7 @@
                         <h2 class="text-xl font-bold flex items-center gap-2">
                             <span class="text-yellow-500">💈</span> Servicios de Barbería
                         </h2>
-                        <button onclick="agregarServicio('barberia')" class="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all">
+                        <button onclick="agregarServicio('barberia')" class="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all active:scale-95">
                             + AGREGAR
                         </button>
                     </div>
@@ -210,7 +217,7 @@
                         <h2 class="text-xl font-bold flex items-center gap-2">
                             <span class="text-pink-500">💅</span> Servicios de Uñas
                         </h2>
-                        <button onclick="agregarServicio('unas')" class="bg-pink-600/10 text-pink-500 px-4 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all">
+                        <button onclick="agregarServicio('unas')" class="bg-pink-600/10 text-pink-500 px-4 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all active:scale-95">
                             + AGREGAR
                         </button>
                     </div>
