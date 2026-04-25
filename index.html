@@ -22,52 +22,61 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
-            authDomain: "amsterdam-barber-club.firebaseapp.com",
-            projectId: "amsterdam-barber-club",
-            storageBucket: "amsterdam-barber-club.firebasestorage.app",
-            messagingSenderId: "520214344037",
-            appId: "1:520214344037:web:3c8e6ea2bfa10bac91b18c",
-            measurementId: "G-HHX3QVXEQJ"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
+        authDomain: "amsterdam-barber-club.firebaseapp.com",
+        projectId: "amsterdam-barber-club",
+        storageBucket: "amsterdam-barber-club.firebasestorage.app",
+        messagingSenderId: "520214344037",
+        appId: "1:520214344037:web:3c8e6ea2bfa10bac91b18c",
+        measurementId: "G-HHX3QVXEQJ"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore();
 
-        window.addEventListener('load', () => {
-            onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    
-                    // Generar opciones para los selectores (formato moneda Colombia)
-                    const opcionesBarberia = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
-                        data.barberia.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
-                    
-                    const opcionesUnas = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
-                        data.unas.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
+    window.addEventListener('load', () => {
+        onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                
+                // 1. ACTUALIZAR SERVICIOS Y PRECIOS
+                const opcionesBarberia = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
+                    data.barberia.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
+                
+                const opcionesUnas = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
+                    data.unas.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
 
-                    // Inyectar en formulario Barbería
-                    const servB = document.getElementById('servB');
-                    if(servB) servB.innerHTML = opcionesBarberia;
+                if(document.getElementById('servB')) document.getElementById('servB').innerHTML = opcionesBarberia;
+                if(document.getElementById('servU')) document.getElementById('servU').innerHTML = opcionesUnas;
+                if(document.getElementById('servAB')) document.getElementById('servAB').innerHTML = opcionesBarberia;
+                if(document.getElementById('servAU')) document.getElementById('servAU').innerHTML = opcionesUnas;
 
-                    // Inyectar en formulario Uñas
-                    const servU = document.getElementById('servU');
-                    if(servU) servU.innerHTML = opcionesUnas;
+                // 2. CONTROL DE EQUIPO DINÁMICO (Lo que me pediste)
+                const crearHtmlEquipo = (lista, nameInput, color) => lista.map(p => `
+                    <label class="cursor-pointer text-center group">
+                        <input type="radio" name="${nameInput}" value="${p.nombre}" required class="peer hidden">
+                        <img src="${p.foto}" onerror="this.src='https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${color}&size=150'" 
+                             class="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-${color === 'eab308' ? 'yellow' : 'pink'}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                        <span class="block mt-2 text-xs md:text-sm text-gray-400 peer-checked:text-white peer-checked:font-bold">${p.nombre}</span>
+                    </label>
+                `).join('');
 
-                    // Inyectar en formulario Combo Ambos
-                    const servAB = document.getElementById('servAB');
-                    if(servAB) servAB.innerHTML = opcionesBarberia;
-                    
-                    const servAU = document.getElementById('servAU');
-                    if(servAU) servAU.innerHTML = opcionesUnas;
-                }
-            });
+                const htmlBarberos = crearHtmlEquipo(data.equipo.barberia, 'profB', 'eab308');
+                const htmlManicuristas = crearHtmlEquipo(data.equipo.unas, 'profU', 'ec4899');
+
+                // Inyectamos las fotos y nombres en los 4 lugares donde aparecen
+                if(document.getElementById('contenedor-barberos')) document.getElementById('contenedor-barberos').innerHTML = htmlBarberos;
+                if(document.getElementById('contenedor-manicuristas')) document.getElementById('contenedor-manicuristas').innerHTML = htmlManicuristas;
+                if(document.getElementById('contenedor-barberos-combo')) document.getElementById('contenedor-barberos-combo').innerHTML = htmlBarberos;
+                if(document.getElementById('contenedor-manicuristas-combo')) document.getElementById('contenedor-manicuristas-combo').innerHTML = htmlManicuristas;
+            }
         });
-    </script>
+    });
+</script>
     <style>
         .mensaje-barberia {
             background: linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1));
@@ -187,20 +196,11 @@
                     </select>
 
                     <div class="pt-2">
-                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
-                        <div class="flex justify-center gap-6">
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profB" value="Santiago" required class="peer hidden">
-                                <img src="img/equipo/santiago.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Santiago&background=1f2937&color=eab308&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
-                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-yellow-500 peer-checked:font-bold">Santiago</span>
-                            </label>
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profB" value="Armando" required class="peer hidden">
-                                <img src="img/equipo/armando.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Armando&background=1f2937&color=eab308&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
-                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-yellow-500 peer-checked:font-bold">Armando</span>
-                            </label>
-                        </div>
-                    </div>
+    <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+    <div id="contenedor-barberos" class="flex justify-center gap-6">
+        <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
+    </div>
+</div>
 
                     <div class="grid grid-cols-2 gap-4 pt-2">
                         <div>
@@ -325,21 +325,12 @@
                         <option value="" disabled selected>Sincronizando servicios en vivo...</option>
                     </select>
 
-                    <div class="pt-2">
-                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
-                        <div class="flex justify-center gap-6">
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profU" value="Valentina" required class="peer hidden">
-                                <img src="img/equipo/valentina.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Valentina&background=1f2937&color=ec4899&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
-                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-pink-500 peer-checked:font-bold">Valentina</span>
-                            </label>
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profU" value="Anguie" required class="peer hidden">
-                                <img src="img/equipo/anguie.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Anguie&background=1f2937&color=ec4899&size=150'" class="w-20 h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
-                                <span class="block mt-2 text-sm text-gray-400 peer-checked:text-pink-500 peer-checked:font-bold">Anguie</span>
-                            </label>
-                        </div>
-                    </div>
+                   <div class="pt-2">
+    <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+    <div id="contenedor-manicuristas" class="flex justify-center gap-6">
+        <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
+    </div>
+</div>
 
                     <div class="grid grid-cols-2 gap-4 pt-2">
                         <div>
@@ -453,18 +444,8 @@
                         
                         <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
                         
-                        <div class="flex justify-center gap-4">
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profAB" value="Santiago" required class="peer hidden">
-                                <img src="img/equipo/santiago.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Santiago&background=1f2937&color=eab308'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all object-cover">
-                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-yellow-500">Santiago</span>
-                            </label>
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profAB" value="Armando" required class="peer hidden">
-                                <img src="img/equipo/armando.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Armando&background=1f2937&color=eab308'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-yellow-500 peer-checked:scale-110 transition-all object-cover">
-                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-yellow-500">Armando</span>
-                            </label>
-                        </div>
+                        <div id="contenedor-barberos-combo" class="flex justify-center gap-4">
+    </div>
                     </div>
 
                     <div class="p-4 border border-pink-600 rounded-lg">
@@ -475,18 +456,8 @@
                         
                         <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
 
-                        <div class="flex justify-center gap-4">
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profAU" value="Valentina" required class="peer hidden">
-                                <img src="img/equipo/valentina.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Valentina&background=1f2937&color=ec4899'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all object-cover">
-                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-pink-500">Valentina</span>
-                            </label>
-                            <label class="cursor-pointer text-center group">
-                                <input type="radio" name="profAU" value="Anguie" required class="peer hidden">
-                                <img src="img/equipo/anguie.jpg" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=Anguie&background=1f2937&color=ec4899'" class="w-14 h-14 mx-auto rounded-full border-2 border-gray-600 peer-checked:border-pink-500 peer-checked:scale-110 transition-all object-cover">
-                                <span class="block mt-1 text-xs text-gray-400 peer-checked:text-pink-500">Anguie</span>
-                            </label>
-                        </div>
+                        <div id="contenedor-manicuristas-combo" class="flex justify-center gap-4">
+    </div>
                     </div>
 
                     <div class="flex items-center justify-center space-x-2 mt-4">
@@ -631,7 +602,7 @@
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Combo Completo</button>
                 </form>
             </section>
-        </div>
+        </div>  
 
     </div>
 
