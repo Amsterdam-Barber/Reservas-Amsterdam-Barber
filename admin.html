@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Amsterdam Barber Club</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Configuración oficial de tu proyecto
+        const firebaseConfig = {
+            apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
+            authDomain: "amsterdam-barber-club.firebaseapp.com",
+            projectId: "amsterdam-barber-club",
+            storageBucket: "amsterdam-barber-club.firebasestorage.app",
+            messagingSenderId: "520214344037",
+            appId: "1:520214344037:web:3c8e6ea2bfa10bac91b18c",
+            measurementId: "G-HHX3QVXEQJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore();
+
+        // Lógica de Inicio de Sesión
+        window.login = async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('pass').value;
+            const btn = document.getElementById('btn-login');
+            btn.innerText = "Verificando...";
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (e) { 
+                alert("Acceso denegado: Verifica tu correo y contraseña.");
+                btn.innerText = "Entrar al Panel";
+            }
+        };
+
+        window.logout = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('admin-section').classList.remove('hidden');
+                escucharDatos();
+            } else {
+                document.getElementById('login-section').classList.remove('hidden');
+                document.getElementById('admin-section').classList.add('hidden');
+            }
+        });
+
+        // Sincronización con la Base de Datos
+        function escucharDatos() {
+            onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    renderizarInterfaz(data);
+                    actualizarEstadisticas(data.stats || { barberia: 50, unas: 50 });
+                } else {
+                    inicializarNegocio();
+                }
+            });
+        }
+
+        async function inicializarNegocio() {
+            const base = {
+                barberia: [
+                    { nombre: "Corte Caballero", precio: 19000 },
+                    { nombre: "Corte y Barba", precio: 25000 }
+                ],
+                unas: [
+                    { nombre: "Tradicional", precio: 17000 },
+                    { nombre: "Semi-Permanente", precio: 35000 }
+                ],
+                equipo: {
+                    barberia: ["Santiago", "Armando"],
+                    unas: ["Valentina", "Anguie"]
+                },
+                stats: { barberia: 0, unas: 0 }
+            };
+            await setDoc(doc(db, "configuracion", "negocio"), base);
+        }
+
+        function renderizarInterfaz(data) {
+            // Renderizar Barbería
+            document.getElementById('lista-barberia').innerHTML = data.barberia.map((s, i) => `
+                <div class="flex gap-2 mb-3">
+                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600">
+                    <input type="number" value="${s.precio}" onchange="cambiarServicio('barberia', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-yellow-500 font-bold">
+                    <button onclick="eliminarServicio('barberia', ${i})" class="bg-red-900/50 text-red-500 px-3 rounded">✕</button>
+                </div>
+            `).join('');
+
+            // Renderizar Uñas
+            document.getElementById('lista-unas').innerHTML = data.unas.map((s, i) => `
+                <div class="flex gap-2 mb-3">
+                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('unas', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600">
+                    <input type="number" value="${s.precio}" onchange="cambiarServicio('unas', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-pink-500 font-bold">
+                    <button onclick="eliminarServicio('unas', ${i})" class="bg-red-900/50 text-red-500 px-3 rounded">✕</button>
+                </div>
+            `).join('');
+        }
+
+        window.cambiarServicio = async (cat, index, campo, valor) => {
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data[cat][index][campo] = campo === 'precio' ? parseInt(valor) : valor;
+            await setDoc(docRef, data);
+        };
+
+        window.agregarServicio = async (cat) => {
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data[cat].push({ nombre: "Nuevo Servicio", precio: 0 });
+            await setDoc(docRef, data);
+        };
+
+        window.eliminarServicio = async (cat, index) => {
+            if(!confirm("¿Eliminar este servicio?")) return;
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data[cat].splice(index, 1);
+            await setDoc(docRef, data);
+        };
+
+        let chart;
+        function actualizarEstadisticas(stats) {
+            const ctx = document.getElementById('ventasChart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Barbería', 'Uñas'],
+                    datasets: [{
+                        data: [stats.barberia, stats.unas],
+                        backgroundColor: ['#eab308', '#ec4899'],
+                        borderColor: '#1f2937',
+                        borderWidth: 5
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af' } } } }
+            });
+        }
+    </script>
+
+    <style>
+        body { background-color: #111827; }
+        .glass { background: rgba(31, 41, 55, 0.7); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="text-gray-100 font-sans min-h-screen">
+
+    <div id="login-section" class="flex items-center justify-center min-h-screen p-4">
+        <div class="glass p-8 rounded-2xl border border-yellow-600/30 w-full max-w-md shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="inline-block p-4 rounded-full bg-yellow-600/10 mb-4 border border-yellow-600/20">
+                    <span class="text-4xl">💈</span>
+                </div>
+                <h1 class="text-2xl font-bold text-yellow-500 tracking-tight">ADMIN AMSTERDAM</h1>
+                <p class="text-gray-400 text-sm mt-1">Ingresa para gestionar tu negocio</p>
+            </div>
+            <div class="space-y-4">
+                <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-4 bg-gray-800 rounded-xl border border-gray-700 outline-none focus:border-yellow-500 transition-colors">
+                <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 bg-gray-800 rounded-xl border border-gray-700 outline-none focus:border-yellow-500 transition-colors">
+                <button id="btn-login" onclick="login()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-bold text-gray-900 transition-all transform active:scale-95 shadow-lg shadow-yellow-600/20">
+                    Entrar al Panel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-section" class="hidden pb-20">
+        <header class="glass sticky top-0 z-50 border-b border-gray-800 p-4 mb-8">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">⚡</span>
+                    <h1 class="text-xl font-bold hidden md:block">Amsterdam <span class="text-yellow-500">Dashboard</span></h1>
+                </div>
+                <button onclick="logout()" class="bg-gray-800 hover:bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm font-medium border border-red-900/20 transition-all">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-8">
+                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <span class="text-yellow-500">💈</span> Servicios de Barbería
+                        </h2>
+                        <button onclick="agregarServicio('barberia')" class="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all">
+                            + AGREGAR
+                        </button>
+                    </div>
+                    <div id="lista-barberia"></div>
+                </div>
+
+                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <span class="text-pink-500">💅</span> Servicios de Uñas
+                        </h2>
+                        <button onclick="agregarServicio('unas')" class="bg-pink-600/10 text-pink-500 px-4 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all">
+                            + AGREGAR
+                        </button>
+                    </div>
+                    <div id="lista-unas"></div>
+                </div>
+            </div>
+
+            <div class="space-y-8">
+                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl text-center">
+                    <h2 class="text-lg font-bold mb-6 text-gray-400">Balance de Citas</h2>
+                    <div class="max-w-[200px] mx-auto mb-6">
+                        <canvas id="ventasChart"></canvas>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-gray-800/50 rounded-2xl">
+                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Barbería</p>
+                            <span class="text-xl font-bold text-yellow-500">Sincronizado</span>
+                        </div>
+                        <div class="p-4 bg-gray-800/50 rounded-2xl">
+                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Uñas</p>
+                            <span class="text-xl font-bold text-pink-500">Sincronizado</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <span class="text-blue-400">👥</span> Equipo Activo
+                    </h2>
+                    <p class="text-sm text-gray-500 leading-relaxed">
+                        Actualmente gestionas a tus colaboradores desde el archivo principal. Próximamente activaremos la edición en vivo para ellos aquí.
+                    </p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+</body>
+</html>
