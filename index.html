@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="overflow-x-hidden">
 <head>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XX7NBMRC4X"></script>
     <script>
@@ -10,7 +10,7 @@
       gtag('config', 'G-XX7NBMRC4X');
     </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>💈 Amsterdam Barber Club - ¡Reserva tu Cita! 💈</title>
     <meta name="description" content="Reserva tu cita en Amsterdam Barber Club. Expertos en Barbería, Manicura y Pedicura en Montenegro, Quindío.">
@@ -25,7 +25,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // CONFIGURACIÓN IRROMPIBLE (Firebase original)
     const firebaseConfig = {
         apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
         authDomain: "amsterdam-barber-club.firebaseapp.com",
@@ -52,28 +51,68 @@
             if (snapshot.exists()) {
                 const data = snapshot.data();
                 
-                // --- LÓGICA DE VIDEO DIRECTO ---
+                // --- LÓGICA DE VIDEO CON AUTO-SCROLL, OVERLAY Y OBJECT-CONTAIN ---
                 const vidContainer = document.getElementById('bienvenida-visual');
                 if (data.videoUrl && data.videoUrl.includes("firebasestorage")) {
                     if (vidContainer) {
                         vidContainer.innerHTML = `
                             <div class="max-w-5xl mx-auto px-4 mt-8">
-                                <div class="relative w-full aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-yellow-600/10 bg-black">
+                                <div class="relative w-full aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-yellow-600/10 bg-black flex items-center justify-center group">
                                     <video 
-                                        class="absolute top-0 left-0 w-full h-full object-cover"
-                                        autoplay 
+                                        id="promo-video"
+                                        class="w-full h-full object-contain outline-none bg-black"
                                         muted 
-                                        loop 
-                                        playsinline
-                                        poster="img/logo.jpg">
+                                        loop
+                                        playsinline>
                                         <source src="${data.videoUrl}" type="video/mp4">
                                         Tu navegador no soporta video.
                                     </video>
+                                    
+                                    <!-- CAPA: OPRIME PARA ESCUCHAR -->
+                                    <div id="unmute-overlay" class="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer transition-all duration-500 z-10 hover:bg-black/30">
+                                        <div class="bg-gray-900/80 px-6 py-3 rounded-full border border-yellow-500/50 flex items-center gap-3 animate-pulse shadow-[0_0_20px_rgba(234,179,8,0.3)] backdrop-blur-sm">
+                                            <span class="text-2xl">🔊</span>
+                                            <span class="text-white font-bold tracking-widest text-xs md:text-sm uppercase">Oprime para escuchar</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <p class="text-center text-gray-500 text-[10px] mt-4 uppercase tracking-[0.3em] font-bold">Vive la experiencia Amsterdam Club</p>
                             </div>
                         `;
                         vidContainer.classList.remove('hidden');
+
+                        // ACTIVAR INTERSECTION OBSERVER
+                        setTimeout(() => {
+                            const video = document.getElementById('promo-video');
+                            const overlay = document.getElementById('unmute-overlay');
+                            
+                            if (video) {
+                                // Observer que revisa si el video está en pantalla
+                                const observer = new IntersectionObserver((entries) => {
+                                    entries.forEach(entry => {
+                                        if (entry.isIntersecting) {
+                                            video.play().catch(e => console.log("Esperando interacción para auto-play"));
+                                        } else {
+                                            video.pause();
+                                        }
+                                    });
+                                }, { threshold: 0.4 }); // 0.4 = 40% visible
+
+                                observer.observe(video);
+
+                                // Lógica al tocar "Oprime para escuchar"
+                                if (overlay) {
+                                    overlay.addEventListener('click', (e) => {
+                                        e.stopPropagation(); 
+                                        video.muted = false; 
+                                        video.controls = true; 
+                                        
+                                        overlay.style.opacity = '0';
+                                        setTimeout(() => overlay.remove(), 500); 
+                                    });
+                                }
+                            }
+                        }, 300);
                     }
                 } else {
                     if (vidContainer) vidContainer.classList.add('hidden');
@@ -84,14 +123,26 @@
                 renderDropdown('cejas', data.cejas, 'text-purple-500');
                 renderDropdown('pestanas', data.pestanas, 'text-indigo-500'); 
 
-                const crearHtmlEquipo = (lista, nameInput, colorName, hexColor, tipo) => (lista || []).map(p => `
+                // --- AGREGAMOS EL BOTÓN DE ZOOM (LUPA) EN EL AVATAR ---
+                const crearHtmlEquipo = (lista, nameInput, colorName, hexColor, tipo) => (lista || []).map(p => {
+                    const avatarUrl = p.foto || `https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${hexColor}&size=150`;
+                    return `
                     <label class="cursor-pointer text-center group flex-none relative" onchange="verificarDisponibilidad('${tipo}')">
                         <input type="radio" name="${nameInput}" value="${p.nombre}" data-descansos='${JSON.stringify(p.descansos || [])}' required class="peer sr-only">
-                        <img src="${p.foto}" onerror="this.src='https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${hexColor}&size=150'" 
-                             class="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-${colorName}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                        
+                        <div class="relative w-16 h-16 md:w-20 md:h-20 mx-auto">
+                            <img src="${p.foto}" onerror="this.src='${avatarUrl}'" 
+                                 class="w-full h-full rounded-full border-4 border-gray-600 peer-checked:border-${colorName}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                            
+                            <!-- BOTÓN DE AMPLIAR FOTO -->
+                            <button type="button" onclick="abrirFotoUnica(this.previousElementSibling.src, event)" class="absolute -top-1 -right-1 bg-gray-800 border border-gray-500 rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-gray-700 hover:scale-110 transition-transform text-[10px] z-10" title="Ver foto">
+                                🔍
+                            </button>
+                        </div>
+
                         <span class="block mt-2 text-xs md:text-sm text-gray-400 peer-checked:text-white peer-checked:font-bold">${p.nombre}</span>
                     </label>
-                `).join('');
+                `}).join('');
 
                 const htmlBarberos = crearHtmlEquipo(data.equipo?.barberia, 'profB', 'yellow', 'eab308', 'barberia');
                 const htmlManicuristas = crearHtmlEquipo(data.equipo?.unas, 'profU', 'pink', 'ec4899', 'unas');
@@ -169,7 +220,7 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(75, 85, 99, 1); border-radius: 10px; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans relative">
+<body class="bg-gray-900 text-gray-100 font-sans relative overflow-x-hidden w-full">
 
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300" onclick="cerrarLightbox(event)">
         <button id="lb-close" onclick="cerrarLightbox()" class="absolute top-6 right-6 text-5xl font-bold transition-transform hover:scale-110 z-[101]">×</button>
@@ -193,7 +244,6 @@
         </a>
     </header>
 
-    <!-- AQUÍ APARECERÁ TU VIDEO AUTOMÁTICAMENTE -->
     <div id="bienvenida-visual" class="hidden"></div>
 
     <section class="max-w-4xl mx-auto mt-12 px-4 text-center">
@@ -211,7 +261,6 @@
         </div>
     </section>
 
-    <!-- EL RESTO DE TU CÓDIGO SIGUE IGUAL (Resumido para ahorrar espacio pero está completo en tu archivo) -->
     <section class="max-w-5xl mx-auto mt-12 px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h3 class="text-xl font-bold text-yellow-500 mb-4">⏰ Horarios de Atención</h3>
@@ -232,7 +281,6 @@
     </section>
 
     <div id="zona-dinamica" class="mt-12">
-        <!-- VISTAS BARBERIA, UNAS, CEJAS (Se mantienen exactamente como estaban) -->
         <div id="vista-barberia" class="hidden">
             <h2 class="text-2xl font-bold text-center text-yellow-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestra Barbería</h2>
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
@@ -741,6 +789,21 @@
         let currentIndex = 0;
         let imagesList = [];
 
+        // NUEVA FUNCIÓN PARA VER LA FOTO DEL PROFESIONAL
+        window.abrirFotoUnica = function(src, event) {
+            if(event) { event.preventDefault(); event.stopPropagation(); }
+            const lightbox = document.getElementById('lightbox');
+            document.getElementById('lb-imagen').src = src;
+            
+            // Ocultamos las flechas porque es solo una foto
+            document.getElementById('lb-prev').classList.add('hidden');
+            document.getElementById('lb-next').classList.add('hidden');
+            
+            lightbox.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; 
+            pausarAutoScroll();
+        }
+
         function abrirLightbox(grupo, indice) {
             currentGroup = grupo;
             currentIndex = indice;
@@ -748,6 +811,11 @@
             imagesList = Array.from(imgs).map(img => img.src);
             const lightbox = document.getElementById('lightbox');
             document.getElementById('lb-imagen').src = imagesList[currentIndex];
+            
+            // Asegurarnos de que las flechas estén visibles para la galería
+            document.getElementById('lb-prev').classList.remove('hidden');
+            document.getElementById('lb-next').classList.remove('hidden');
+            
             lightbox.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; 
             pausarAutoScroll(); 
