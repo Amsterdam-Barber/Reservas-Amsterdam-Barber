@@ -123,6 +123,31 @@
                 renderDropdown('cejas', data.cejas, 'text-purple-500');
                 renderDropdown('pestanas', data.pestanas, 'text-indigo-500'); 
 
+                // --- LÓGICA DE GALERÍAS DINÁMICAS ---
+                window.renderizarGaleria = function(cat, lista, colorClase) {
+                    const contenedor = document.getElementById(`carrusel-${cat}`);
+                    if(!contenedor) return;
+
+                    // Filtramos solo las que están marcadas como "activas" en el admin
+                    const fotosActivas = (lista || []).filter(f => f.activa !== false);
+
+                    if(fotosActivas.length === 0) {
+                        contenedor.innerHTML = `<div class="w-full text-center py-10 text-gray-500 italic text-sm">Próximamente nuevas fotos...</div>`;
+                        return;
+                    }
+
+                    contenedor.innerHTML = fotosActivas.map((f, i) => `
+                        <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-${colorClase} shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('${cat}', ${i})">
+                            <img src="${f.url}" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        </div>
+                    `).join('');
+                };
+
+                // Llamamos a la función para cada sección
+                renderizarGaleria('barberia', data.galeria?.barberia, 'yellow-600');
+                renderizarGaleria('unas', data.galeria?.unas, 'pink-600');
+                renderizarGaleria('cejas', data.galeria?.cejas, 'purple-600');
+
                 // --- AGREGAMOS EL BOTÓN DE ZOOM (LUPA) EN EL AVATAR ---
                 const crearHtmlEquipo = (lista, nameInput, colorName, hexColor, tipo) => (lista || []).map(p => {
                     const avatarUrl = p.foto || `https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${hexColor}&size=150`;
@@ -286,10 +311,7 @@
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-barberia', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
                 <div id="carrusel-barberia" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 0)"><img src="img/barberia/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 1)"><img src="img/barberia/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 2)"><img src="img/barberia/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 3)"><img src="img/barberia/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <!-- Galería dinámica gestionada desde Firebase -->
                 </div>
                 <button onclick="moverCarrusel('carrusel-barberia', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
@@ -355,15 +377,7 @@
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-unas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
                 <div id="carrusel-unas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 0)"><img src="img/unas/unas(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 1)"><img src="img/unas/unas(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 2)"><img src="img/unas/unas(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 3)"><img src="img/unas/unas(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 4)"><img src="img/unas/unas(5).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 5)"><img src="img/unas/unas(6).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 6)"><img src="img/unas/unas(7).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 7)"><img src="img/unas/unas(8).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 8)"><img src="img/unas/unas(9).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <!-- Galería dinámica gestionada desde Firebase -->
                 </div>
                 <button onclick="moverCarrusel('carrusel-unas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
@@ -429,10 +443,7 @@
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-cejas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-purple-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
                 <div id="carrusel-cejas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 0)"><img src="img/cejas/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Cejas&background=a855f7&color=fff&size=400'"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 1)"><img src="img/cejas/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Mirada&background=a855f7&color=fff&size=400'"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 2)"><img src="img/cejas/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Estilo&background=a855f7&color=fff&size=400'"></div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 3)"><img src="img/cejas/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Pestañas&background=a855f7&color=fff&size=400'"></div>
+                    <!-- Galería dinámica gestionada desde Firebase -->
                 </div>
                 <button onclick="moverCarrusel('carrusel-cejas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-purple-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
