@@ -11,7 +11,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        // Importaciones de Storage actualizadas para incluir metadatos, barra de progreso y eliminar
         import { getStorage, ref, uploadBytes, uploadBytesResumable, getDownloadURL, getMetadata, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -40,7 +39,7 @@
             menu.style.transform = open ? 'translateX(0)' : 'translateX(-100%)';
         };
 
-        // --- NUEVA LÓGICA DE VIDEO DIRECTO ---
+        // --- LÓGICA DE VIDEO DIRECTO ---
         window.cargarEstadoVideo = async (videoUrl) => {
             const statusText = document.getElementById('video-status');
             const infoContainer = document.getElementById('video-details');
@@ -81,10 +80,8 @@
                 
                 if (data && data.videoUrl) {
                     const videoRef = ref(storage, data.videoUrl);
-                    // Eliminar de Storage
                     await deleteObject(videoRef).catch(e => console.log("El archivo ya no estaba en storage"));
                     
-                    // Eliminar URL de Firestore
                     data.videoUrl = "";
                     await setDoc(docRef, data);
                     
@@ -201,6 +198,117 @@
             input.click();
         };
 
+        // --- FUNCIONES PARA LA GALERÍA DINÁMICA ---
+        window.renderAdminGalerias = (galerias) => {
+            const dibujarCategoria = (cat, lista) => {
+                const contenedor = document.getElementById(`admin-galeria-${cat}`);
+                if (!contenedor) return;
+                
+                if (!lista || lista.length === 0) {
+                    contenedor.innerHTML = `<p class="text-gray-500 text-xs text-center py-4">No hay fotos en esta galería.</p>`;
+                    return;
+                }
+
+                contenedor.innerHTML = lista.map((f, i) => `
+                    <div class="bg-gray-900 p-2 rounded-xl flex gap-3 border ${f.activa ? 'border-gray-600' : 'border-red-900/50 opacity-60'} transition-all relative group">
+                        <img src="${f.url}" class="w-16 h-16 object-cover rounded-lg border border-gray-700">
+                        <div class="flex-1 flex flex-col justify-center">
+                            <p class="text-[10px] text-gray-400">📅 ${new Date(f.fecha).toLocaleDateString('es-CO')} - ${new Date(f.fecha).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}</p>
+                            <p class="text-[10px] text-yellow-500 font-bold">⚖️ ${f.size} MB</p>
+                            <div class="mt-1 flex gap-2">
+                                <button onclick="toggleEstadoGaleria('${cat}', ${i}, ${!f.activa})" class="text-[10px] px-2 py-1 rounded font-bold ${f.activa ? 'bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}">
+                                    ${f.activa ? '👁️ En línea' : '🙈 Oculta'}
+                                </button>
+                                <button onclick="eliminarFotoGaleria('${cat}', ${i}, '${f.ref}')" class="text-[10px] px-2 py-1 rounded font-bold bg-red-900/40 text-red-500 hover:bg-red-600 hover:text-white">
+                                    🗑️ Borrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            };
+
+            dibujarCategoria('barberia', galerias.barberia);
+            dibujarCategoria('unas', galerias.unas);
+            dibujarCategoria('cejas', galerias.cejas);
+        };
+
+        window.subirFotoGaleria = async (cat) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+
+                try {
+                    // Mostrar un pequeño indicador en el botón (opcional, pero útil)
+                    alert("⏳ Comprimiendo y subiendo foto... Por favor espera un momento.");
+                    
+                    const blob = await comprimirImagen(file); 
+                    const fileName = `galeria/${cat}/${Date.now()}.jpg`;
+                    const storageRef = ref(storage, fileName);
+                    
+                    await uploadBytes(storageRef, blob);
+                    const url = await getDownloadURL(storageRef);
+                    
+                    const meta = {
+                        url: url,
+                        fecha: new Date().toISOString(),
+                        size: (blob.size / (1024 * 1024)).toFixed(2), 
+                        activa: true, 
+                        ref: fileName 
+                    };
+
+                    const docRef = doc(db, "configuracion", "negocio");
+                    const snap = await getDoc(docRef);
+                    const data = snap.data();
+                    
+                    if (!data.galeria) data.galeria = { barberia: [], unas: [], cejas: [] };
+                    if (!data.galeria[cat]) data.galeria[cat] = [];
+                    
+                    data.galeria[cat].push(meta);
+                    await setDoc(docRef, data);
+                    
+                    alert("✅ Foto subida exitosamente.");
+                } catch (error) {
+                    console.error(error);
+                    alert("❌ Error al subir la foto.");
+                }
+            };
+            input.click();
+        };
+
+        window.toggleEstadoGaleria = async (cat, index, nuevoEstado) => {
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            
+            data.galeria[cat][index].activa = nuevoEstado;
+            await setDoc(docRef, data);
+        };
+
+        window.eliminarFotoGaleria = async (cat, index, fileRef) => {
+            if(!confirm("⚠️ ¿Seguro que quieres eliminar esta foto definitivamente?")) return;
+            
+            try {
+                const storageReference = ref(storage, fileRef);
+                await deleteObject(storageReference).catch(e => console.log("Archivo ya no existía en Storage"));
+                
+                const docRef = doc(db, "configuracion", "negocio");
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                
+                data.galeria[cat].splice(index, 1);
+                await setDoc(docRef, data);
+                
+            } catch (error) {
+                console.error(error);
+                alert("Error al eliminar la foto.");
+            }
+        };
+
+        // --- ESTADOS Y RENDERIZADO GENERAL ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('login-section').classList.add('hidden');
@@ -226,7 +334,6 @@
                     const data = snapshot.data();
                     renderizarInterfaz(data);
                     actualizarEstadisticas(data.stats || { barberia: 33, unas: 33, cejas: 34 });
-                    // LLamamos a la función de estado de video cada vez que hay cambios en DB
                     cargarEstadoVideo(data.videoUrl);
                 }
             });
@@ -284,6 +391,9 @@
             renderDescansos('desc-barberia', data.equipo.barberia, 'barberia', 'yellow');
             renderDescansos('desc-unas', data.equipo.unas, 'unas', 'pink');
             renderDescansos('desc-cejas', data.equipo.cejas, 'cejas', 'purple');
+
+            // Renderizar las galerías dinámicas
+            renderAdminGalerias(data.galeria || {});
         }
 
         window.cambiarServicio = async (cat, index, campo, valor) => {
@@ -403,6 +513,8 @@
                 <button onclick="showSection('sec-servicios')" class="w-full text-left p-4 hover:bg-yellow-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>📊</span> Servicios y Precios</button>
                 <button onclick="showSection('sec-equipo')" class="w-full text-left p-4 hover:bg-blue-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>👥</span> Gestión de Equipo</button>
                 <button onclick="showSection('sec-multimedia')" class="w-full text-left p-4 hover:bg-indigo-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>🎬</span> Multimedia (Video)</button>
+                <!-- BOTÓN DE LA NUEVA SECCIÓN DE GALERÍAS -->
+                <button onclick="showSection('sec-galerias')" class="w-full text-left p-4 hover:bg-orange-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>🖼️</span> Galerías de Fotos</button>
                 <button onclick="showSection('sec-descansos')" class="w-full text-left p-4 hover:bg-green-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>📅</span> Calendario Libres</button>
             </nav>
         </div>
@@ -458,7 +570,6 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN MULTIMEDIA ACTUALIZADA CON PANEL DE ESTADO -->
             <div id="sec-multimedia" class="admin-page hidden space-y-6">
                 <h2 class="text-2xl font-bold">Multimedia</h2>
                 
@@ -502,6 +613,45 @@
                                 <div id="upload-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NUEVA SECCIÓN DE GALERÍAS DE FOTOS -->
+            <div id="sec-galerias" class="admin-page hidden space-y-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold">Galerías de Servicios</h2>
+                        <p class="text-gray-500 text-xs mt-1">Sube, oculta o elimina fotos de las secciones "Conoce nuestro trabajo".</p>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <!-- Barbería -->
+                    <div class="bg-gray-800 p-5 rounded-3xl border border-yellow-600/10">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                            <span class="text-yellow-500 font-bold">💈 Barbería</span> 
+                            <button onclick="subirFotoGaleria('barberia')" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded-lg transition-colors shadow-lg">⬆️ Subir Foto</button>
+                        </div>
+                        <div id="admin-galeria-barberia" class="space-y-3 max-h-[500px] overflow-y-auto custom-scroll pr-2"></div>
+                    </div>
+
+                    <!-- Uñas -->
+                    <div class="bg-gray-800 p-5 rounded-3xl border border-pink-600/10">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                            <span class="text-pink-500 font-bold">💅 Uñas</span> 
+                            <button onclick="subirFotoGaleria('unas')" class="text-xs bg-pink-600 hover:bg-pink-500 text-white px-3 py-1.5 rounded-lg transition-colors shadow-lg">⬆️ Subir Foto</button>
+                        </div>
+                        <div id="admin-galeria-unas" class="space-y-3 max-h-[500px] overflow-y-auto custom-scroll pr-2"></div>
+                    </div>
+
+                    <!-- Miradas -->
+                    <div class="bg-gray-800 p-5 rounded-3xl border border-purple-600/10">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                            <span class="text-purple-500 font-bold">✨ Miradas</span> 
+                            <button onclick="subirFotoGaleria('cejas')" class="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg transition-colors shadow-lg">⬆️ Subir Foto</button>
+                        </div>
+                        <div id="admin-galeria-cejas" class="space-y-3 max-h-[500px] overflow-y-auto custom-scroll pr-2"></div>
                     </div>
                 </div>
             </div>
