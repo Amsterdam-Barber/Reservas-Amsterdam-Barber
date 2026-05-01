@@ -15,7 +15,7 @@
     <title>💈 Amsterdam Barber Club - ¡Reserva tu Cita! 💈</title>
     <meta name="description" content="Reserva tu cita en Amsterdam Barber Club. Expertos en Barbería, Manicura y Pedicura en Montenegro, Quindío.">
     <meta property="og:title" content="💈 Amsterdam Barber Club | Reservas">
-    <meta property="og:description" content="Agenda tu cita fácil y rápido. Cortes, barba, manicura y pedicura con los mejores profesionales.">
+    <meta property="og:description" content="Agenda tu cita fácil y rápido. Cortes, barba, manicura, pedicura, cejas y pestañas con los mejores profesionales.">
     <link rel="icon" type="image/jpeg" href="img/logo.jpg">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,6 +25,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // CONFIGURACIÓN IRROMPIBLE (Firebase original)
     const firebaseConfig = {
         apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
         authDomain: "amsterdam-barber-club.firebaseapp.com",
@@ -39,79 +40,141 @@
     const db = getFirestore();
 
     window.addEventListener('load', () => {
+        generarFechas();
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-dropdown')) {
+                document.querySelectorAll('[id^="list-services-"]').forEach(ul => ul.classList.add('hidden'));
+            }
+        });
+
         onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.data();
                 
-                // 1. ACTUALIZAR SERVICIOS Y PRECIOS
-                const opcionesBarberia = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
-                    data.barberia.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
-                
-                const opcionesUnas = '<option value="" disabled selected>Selecciona un servicio...</option>' + 
-                    data.unas.map(s => `<option value="${s.nombre} - $${s.precio.toLocaleString('es-CO')}">${s.nombre} ($${s.precio.toLocaleString('es-CO')})</option>`).join('');
+                // --- LÓGICA DE VIDEO DIRECTO ---
+                const vidContainer = document.getElementById('bienvenida-visual');
+                if (data.videoUrl && data.videoUrl.includes("firebasestorage")) {
+                    if (vidContainer) {
+                        vidContainer.innerHTML = `
+                            <div class="max-w-5xl mx-auto px-4 mt-8">
+                                <div class="relative w-full aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-yellow-600/10 bg-black">
+                                    <video 
+                                        class="absolute top-0 left-0 w-full h-full object-cover"
+                                        autoplay 
+                                        muted 
+                                        loop 
+                                        playsinline
+                                        poster="img/logo.jpg">
+                                        <source src="${data.videoUrl}" type="video/mp4">
+                                        Tu navegador no soporta video.
+                                    </video>
+                                </div>
+                                <p class="text-center text-gray-500 text-[10px] mt-4 uppercase tracking-[0.3em] font-bold">Vive la experiencia Amsterdam Club</p>
+                            </div>
+                        `;
+                        vidContainer.classList.remove('hidden');
+                    }
+                } else {
+                    if (vidContainer) vidContainer.classList.add('hidden');
+                }
 
-                if(document.getElementById('servB')) document.getElementById('servB').innerHTML = opcionesBarberia;
-                if(document.getElementById('servU')) document.getElementById('servU').innerHTML = opcionesUnas;
-                if(document.getElementById('servAB')) document.getElementById('servAB').innerHTML = opcionesBarberia;
-                if(document.getElementById('servAU')) document.getElementById('servAU').innerHTML = opcionesUnas;
+                renderDropdown('barberia', data.barberia, 'text-yellow-500');
+                renderDropdown('unas', data.unas, 'text-pink-500');
+                renderDropdown('cejas', data.cejas, 'text-purple-500');
+                renderDropdown('pestanas', data.pestanas, 'text-indigo-500'); 
 
-                // 2. CONTROL DE EQUIPO DINÁMICO (Lo que me pediste)
-                const crearHtmlEquipo = (lista, nameInput, color) => lista.map(p => `
-                    <label class="cursor-pointer text-center group">
-                        <input type="radio" name="${nameInput}" value="${p.nombre}" required class="peer hidden">
-                        <img src="${p.foto}" onerror="this.src='https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${color}&size=150'" 
-                             class="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-${color === 'eab308' ? 'yellow' : 'pink'}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
+                const crearHtmlEquipo = (lista, nameInput, colorName, hexColor, tipo) => (lista || []).map(p => `
+                    <label class="cursor-pointer text-center group flex-none relative" onchange="verificarDisponibilidad('${tipo}')">
+                        <input type="radio" name="${nameInput}" value="${p.nombre}" data-descansos='${JSON.stringify(p.descansos || [])}' required class="peer sr-only">
+                        <img src="${p.foto}" onerror="this.src='https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${hexColor}&size=150'" 
+                             class="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full border-4 border-gray-600 peer-checked:border-${colorName}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
                         <span class="block mt-2 text-xs md:text-sm text-gray-400 peer-checked:text-white peer-checked:font-bold">${p.nombre}</span>
                     </label>
                 `).join('');
 
-                const htmlBarberos = crearHtmlEquipo(data.equipo.barberia, 'profB', 'eab308');
-                const htmlManicuristas = crearHtmlEquipo(data.equipo.unas, 'profU', 'ec4899');
+                const htmlBarberos = crearHtmlEquipo(data.equipo?.barberia, 'profB', 'yellow', 'eab308', 'barberia');
+                const htmlManicuristas = crearHtmlEquipo(data.equipo?.unas, 'profU', 'pink', 'ec4899', 'unas');
+                const htmlCejas = crearHtmlEquipo(data.equipo?.cejas, 'profC', 'purple', 'a855f7', 'cejas');
 
-                // Inyectamos las fotos y nombres en los 4 lugares donde aparecen
                 if(document.getElementById('contenedor-barberos')) document.getElementById('contenedor-barberos').innerHTML = htmlBarberos;
                 if(document.getElementById('contenedor-manicuristas')) document.getElementById('contenedor-manicuristas').innerHTML = htmlManicuristas;
-                if(document.getElementById('contenedor-barberos-combo')) document.getElementById('contenedor-barberos-combo').innerHTML = htmlBarberos;
-                if(document.getElementById('contenedor-manicuristas-combo')) document.getElementById('contenedor-manicuristas-combo').innerHTML = htmlManicuristas;
+                if(document.getElementById('contenedor-cejas')) document.getElementById('contenedor-cejas').innerHTML = htmlCejas;
             }
         });
     });
-</script>
+
+    window.renderDropdown = function(tipo, lista, colorTextClass) {
+        const ul = document.getElementById(`list-services-${tipo}`);
+        if(!ul) return;
+        
+        let htmlNinguno = "";
+        if(tipo === 'cejas' || tipo === 'pestanas') {
+            htmlNinguno = `
+                <li class="p-4 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
+                    onclick="seleccionarServicio('${tipo}', 'Ninguno', 0, 'text-gray-500')">
+                    <span class="font-bold text-gray-400">Ninguno</span>
+                </li>`;
+        }
+
+        if(!lista || lista.length === 0) {
+            ul.innerHTML = htmlNinguno + `<li class="p-4 text-gray-500 text-center">Sin servicios disponibles</li>`;
+            return;
+        }
+        
+        ul.innerHTML = htmlNinguno + lista.map(s => `
+            <li class="p-4 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
+                onclick="seleccionarServicio('${tipo}', '${s.nombre}', ${s.precio}, '${colorTextClass}')">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-gray-200">${s.nombre}</span>
+                    <span class="${colorTextClass} font-bold">$${s.precio.toLocaleString('es-CO')}</span>
+                </div>
+            </li>
+        `).join('');
+    };
+
+    window.toggleDropdown = function(tipo) {
+        const ul = document.getElementById(`list-services-${tipo}`);
+        document.querySelectorAll('[id^="list-services-"]').forEach(el => {
+            if(el.id !== `list-services-${tipo}`) el.classList.add('hidden');
+        });
+        ul.classList.toggle('hidden');
+    };
+
+    window.seleccionarServicio = function(tipo, nombre, precio, textColor) {
+        const inputId = tipo === 'barberia' ? 'servB' : (tipo === 'unas' ? 'servU' : (tipo === 'cejas' ? 'servCj' : 'servPs'));
+        const displayId = tipo === 'barberia' ? 'selected-service-barberia' : (tipo === 'unas' ? 'selected-service-unas' : (tipo === 'cejas' ? 'selected-service-cejas' : 'selected-service-pestanas'));
+        
+        document.getElementById(inputId).value = nombre === 'Ninguno' ? 'Ninguno' : `${nombre} - $${precio.toLocaleString('es-CO')}`;
+        
+        if(nombre === 'Ninguno') {
+            document.getElementById(displayId).innerHTML = `<span class="text-gray-500 italic">Ninguno seleccionado</span>`;
+        } else {
+            document.getElementById(displayId).innerHTML = `<span class="text-white">${nombre}</span> <span class="${textColor} font-bold ml-2"> $${precio.toLocaleString('es-CO')}</span>`;
+        }
+        
+        document.getElementById(`list-services-${tipo}`).classList.add('hidden');
+    };
+    </script>
     <style>
-        .mensaje-barberia {
-            background: linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1));
-            border-color: rgba(250, 204, 21, 0.8);
-            box-shadow: 0 4px 6px -1px rgba(234, 179, 8, 0.1), 0 2px 4px -1px rgba(234, 179, 8, 0.06);
-        }
-        .mensaje-unas {
-            background: linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1));
-            border-color: rgba(244, 114, 182, 0.8);
-            box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.1), 0 2px 4px -1px rgba(236, 72, 153, 0.06);
-        }
-        .mensaje-ambos {
-            background: linear-gradient(to right, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
-            border-color: rgba(96, 165, 250, 0.8);
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(59, 130, 246, 0.06);
-        }
-        /* Animación suave para el lightbox */
-        #lightbox img {
-            max-height: 85vh;
-            max-width: 90vw;
-        }
-        /* Ocultar barra de scroll en los carruseles pero permitir deslizamiento */
+        .mensaje-barberia { background: linear-gradient(to right, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1)); border-color: rgba(250, 204, 21, 0.8); box-shadow: 0 4px 6px -1px rgba(234, 179, 8, 0.1), 0 2px 4px -1px rgba(234, 179, 8, 0.06); }
+        .mensaje-unas { background: linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1)); border-color: rgba(244, 114, 182, 0.8); box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.1), 0 2px 4px -1px rgba(236, 72, 153, 0.06); }
+        .mensaje-cejas { background: linear-gradient(to right, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1)); border-color: rgba(192, 132, 252, 0.8); box-shadow: 0 4px 6px -1px rgba(168, 85, 247, 0.1), 0 2px 4px -1px rgba(168, 85, 247, 0.06); }
+        #lightbox img { max-height: 85vh; max-width: 90vw; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(31, 41, 55, 1); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(75, 85, 99, 1); border-radius: 10px; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans relative">
 
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300" onclick="cerrarLightbox(event)">
         <button id="lb-close" onclick="cerrarLightbox()" class="absolute top-6 right-6 text-5xl font-bold transition-transform hover:scale-110 z-[101]">×</button>
-        
         <button id="lb-prev" onclick="cambiarFoto(-1, event)" class="absolute left-2 md:left-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">❮</button>
-        
         <img id="lb-imagen" src="" class="object-contain rounded-lg shadow-[0_0_25px_rgba(0,0,0,0.7)] transform transition-all duration-300" onclick="event.stopPropagation()">
-        
         <button id="lb-next" onclick="cambiarFoto(1, event)" class="absolute right-2 md:right-6 text-5xl md:text-6xl font-bold p-4 transition-transform hover:scale-110 hover:bg-white/10 rounded-full z-[101] select-none">❯</button>
     </div>
 
@@ -120,9 +183,18 @@
             <img src="img/logo.jpg" alt="Logo Amsterdam Barber Club" class="w-full h-auto block" onerror="this.style.display='none';">
         </div>
         <h1 class="text-4xl font-bold text-yellow-500 mb-2 tracking-widest">AMSTERDAM BARBER CLUB</h1>
-        <p class="text-gray-300 text-lg">Montenegro Quindío, Zona Galería Calle 20 7-14 Local 2</p>
-        <p class="text-gray-500 text-sm mt-1">(Enseguida del Chavo)</p>
+        
+        <a href="https://maps.google.com/?cid=9610198737671785996&g_mp=CiVnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLkdldFBsYWNlEAIYASAA&hl=es&source=embed" target="_blank" class="mt-2 group inline-flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-700/50 transition-colors cursor-pointer">
+            <div class="flex items-center gap-2 text-gray-300 text-lg group-hover:text-yellow-500 transition-colors">
+                <span class="text-xl animate-bounce">📍</span>
+                <span class="border-b border-dashed border-gray-500 group-hover:border-yellow-500">Montenegro Quindío, Zona Galería Calle 20 7-14 Local 2</span>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">(Enseguida del Chavo) - Toca para ver en el mapa</p>
+        </a>
     </header>
+
+    <!-- AQUÍ APARECERÁ TU VIDEO AUTOMÁTICAMENTE -->
+    <div id="bienvenida-visual" class="hidden"></div>
 
     <section class="max-w-4xl mx-auto mt-12 px-4 text-center">
         <h2 class="text-3xl font-bold text-white mb-8">¿Qué servicio deseas hoy?</h2>
@@ -133,12 +205,13 @@
             <button onclick="mostrarSeccion('unas')" class="bg-gray-800 border-2 border-pink-600 hover:bg-pink-600 text-white font-bold py-6 px-4 rounded-xl shadow-2xl transition duration-300 transform hover:-translate-y-2 text-xl">
                 💅 Manicura & Pedicura
             </button>
-            <button onclick="mostrarSeccion('ambos')" class="bg-gray-800 border-2 border-blue-600 hover:bg-blue-600 text-white font-bold py-6 px-4 rounded-xl shadow-2xl transition duration-300 transform hover:-translate-y-2 text-xl">
-                ✨ ¡Quiero Ambos!
+            <button onclick="mostrarSeccion('cejas')" class="bg-gray-800 border-2 border-purple-600 hover:bg-purple-600 text-white font-bold py-6 px-4 rounded-xl shadow-2xl transition duration-300 transform hover:-translate-y-2 text-xl">
+                ✨ Cejas & Pestañas
             </button>
         </div>
     </section>
 
+    <!-- EL RESTO DE TU CÓDIGO SIGUE IGUAL (Resumido para ahorrar espacio pero está completo en tu archivo) -->
     <section class="max-w-5xl mx-auto mt-12 px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h3 class="text-xl font-bold text-yellow-500 mb-4">⏰ Horarios de Atención</h3>
@@ -159,103 +232,54 @@
     </section>
 
     <div id="zona-dinamica" class="mt-12">
-        
+        <!-- VISTAS BARBERIA, UNAS, CEJAS (Se mantienen exactamente como estaban) -->
         <div id="vista-barberia" class="hidden">
             <h2 class="text-2xl font-bold text-center text-yellow-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestra Barbería</h2>
-            
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-barberia', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
-                
                 <div id="carrusel-barberia" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 0)">
-                        <img src="img/barberia/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 1)">
-                        <img src="img/barberia/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 2)">
-                        <img src="img/barberia/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 3)">
-                        <img src="img/barberia/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 0)"><img src="img/barberia/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 1)"><img src="img/barberia/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 2)"><img src="img/barberia/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-yellow-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('barberia', 3)"><img src="img/barberia/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
                 </div>
-
                 <button onclick="moverCarrusel('carrusel-barberia', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-yellow-600 mb-16">
                 <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Barbería</h2>
                 <form id="formBarberia" class="space-y-4" onsubmit="enviarReserva(event, 'barberia')">
-                    <input type="text" id="nomB" required placeholder="Tu Nombre Completo" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
-                    
+                    <input type="text" id="nomB" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
                     <input type="tel" id="telB" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
                     
-                    <select id="servB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none cursor-pointer">
-                        <option value="" disabled selected>Sincronizando servicios en vivo...</option>
-                    </select>
+                    <div class="relative custom-dropdown z-50">
+                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-yellow-500" onclick="toggleDropdown('barberia')">
+                            <span id="selected-service-barberia" class="text-gray-400">Selecciona un servicio...</span>
+                            <span class="text-yellow-500">▼</span>
+                        </button>
+                        <ul id="list-services-barberia" class="hidden absolute w-full mt-1 bg-gray-800 border border-yellow-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto"></ul>
+                        <input type="text" id="servB" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
 
-                    <div class="pt-2">
-    <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
-    <div id="contenedor-barberos" class="flex justify-center gap-6">
-        <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
-    </div>
-</div>
+                    <div class="pt-2 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+                        <div id="contenedor-barberos" class="flex justify-center gap-4 overflow-x-auto hide-scrollbar pb-2">
+                            <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
+                        </div>
+                    </div>
 
-                    <div class="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Fecha</label>
-                            <input type="date" id="fechaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                    <div class="pt-2 border-t border-gray-700 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">Fecha</label>
+                        <div class="flex gap-3 overflow-x-auto hide-scrollbar snap-x pb-2" id="date-container-barberia"></div>
+                        <input type="text" id="fechaB" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-700 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">Hora</label>
+                        <div id="hours-container-barberia" class="grid grid-cols-1">
+                            <p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg">Por favor, elige un día arriba para ver las horas disponibles.</p>
                         </div>
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
-                            <select id="horaB" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none cursor-pointer">
-                                <option value="" disabled selected>Elegir hora...</option>
-                                <option value="09:30 AM" data-time="09:30">09:30 AM</option>
-                                <option value="09:45 AM" data-time="09:45">09:45 AM</option>
-                                <option value="10:00 AM" data-time="10:00">10:00 AM</option>
-                                <option value="10:15 AM" data-time="10:15">10:15 AM</option>
-                                <option value="10:30 AM" data-time="10:30">10:30 AM</option>
-                                <option value="10:45 AM" data-time="10:45">10:45 AM</option>
-                                <option value="11:00 AM" data-time="11:00">11:00 AM</option>
-                                <option value="11:15 AM" data-time="11:15">11:15 AM</option>
-                                <option value="11:30 AM" data-time="11:30">11:30 AM</option>
-                                <option value="11:45 AM" data-time="11:45">11:45 AM</option>
-                                <option value="12:00 PM" data-time="12:00">12:00 PM</option>
-                                <option value="12:15 PM" data-time="12:15">12:15 PM</option>
-                                <option value="12:30 PM" data-time="12:30">12:30 PM</option>
-                                <option value="12:45 PM" data-time="12:45">12:45 PM</option>
-                                <option value="01:00 PM" data-time="13:00">01:00 PM</option>
-                                <option value="01:15 PM" data-time="13:15">01:15 PM</option>
-                                <option value="01:30 PM" data-time="13:30">01:30 PM</option>
-                                <option value="01:45 PM" data-time="13:45">01:45 PM</option>
-                                <option value="02:00 PM" data-time="14:00">02:00 PM</option>
-                                <option value="02:15 PM" data-time="14:15">02:15 PM</option>
-                                <option value="02:30 PM" data-time="14:30">02:30 PM</option>
-                                <option value="02:45 PM" data-time="14:45">02:45 PM</option>
-                                <option value="03:00 PM" data-time="15:00">03:00 PM</option>
-                                <option value="03:15 PM" data-time="15:15">03:15 PM</option>
-                                <option value="03:30 PM" data-time="15:30">03:30 PM</option>
-                                <option value="03:45 PM" data-time="15:45">03:45 PM</option>
-                                <option value="04:00 PM" data-time="16:00">04:00 PM</option>
-                                <option value="04:15 PM" data-time="16:15">04:15 PM</option>
-                                <option value="04:30 PM" data-time="16:30">04:30 PM</option>
-                                <option value="04:45 PM" data-time="16:45">04:45 PM</option>
-                                <option value="05:00 PM" data-time="17:00">05:00 PM</option>
-                                <option value="05:15 PM" data-time="17:15">05:15 PM</option>
-                                <option value="05:30 PM" data-time="17:30">05:30 PM</option>
-                                <option value="05:45 PM" data-time="17:45">05:45 PM</option>
-                                <option value="06:00 PM" data-time="18:00">06:00 PM</option>
-                                <option value="06:15 PM" data-time="18:15">06:15 PM</option>
-                                <option value="06:30 PM" data-time="18:30">06:30 PM</option>
-                                <option value="06:45 PM" data-time="18:45">06:45 PM</option>
-                                <option value="07:00 PM" data-time="19:00">07:00 PM</option>
-                                <option value="07:15 PM" data-time="19:15">07:15 PM</option>
-                                <option value="07:30 PM" data-time="19:30">07:30 PM</option>
-                                <option value="07:45 PM" data-time="19:45">07:45 PM</option>
-                                <option value="08:00 PM" data-time="20:00">08:00 PM</option>
-                            </select>
-                        </div>
+                        <input type="text" id="horaB" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
                     </div>
 
                     <div class="mt-6 p-4 mensaje-barberia border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
@@ -265,127 +289,71 @@
                         <div>
                             <p class="text-sm text-yellow-400 leading-relaxed">
                                 <span class="font-bold text-yellow-500 text-base block mb-1">¡Casi listo!</span>
-                                Confirma tu cita en el botón de abajo y en breve te escribiremos por WhatsApp para asegurar este espacio perfecto para ti.
+                                Confirma tu cita abajo y en breve te escribiremos por WhatsApp.
                             </p>
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Cita</button>
+                    <button type="submit" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg flex justify-center items-center gap-2">
+                        <span class="btn-text">Agendar Cita</span>
+                        <svg class="animate-spin h-5 w-5 text-gray-900 hidden loader-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                 </form>
             </section>
         </div>
 
         <div id="vista-unas" class="hidden">
             <h2 class="text-2xl font-bold text-center text-pink-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Conoce Nuestro Trabajo en Uñas</h2>
-            
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-unas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
-                
                 <div id="carrusel-unas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 0)">
-                        <img src="img/unas/unas(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 1)">
-                        <img src="img/unas/unas(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 2)">
-                        <img src="img/unas/unas(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 3)">
-                        <img src="img/unas/unas(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 4)">
-                        <img src="img/unas/unas(5).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 5)">
-                        <img src="img/unas/unas(6).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 6)">
-                        <img src="img/unas/unas(7).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 7)">
-                        <img src="img/unas/unas(8).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 8)">
-                        <img src="img/unas/unas(9).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 0)"><img src="img/unas/unas(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 1)"><img src="img/unas/unas(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 2)"><img src="img/unas/unas(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 3)"><img src="img/unas/unas(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 4)"><img src="img/unas/unas(5).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 5)"><img src="img/unas/unas(6).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 6)"><img src="img/unas/unas(7).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 7)"><img src="img/unas/unas(8).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-pink-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('unas', 8)"><img src="img/unas/unas(9).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"></div>
                 </div>
-
                 <button onclick="moverCarrusel('carrusel-unas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-pink-600 mb-16">
                 <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Manicura & Pedicura</h2>
                 <form id="formUnas" class="space-y-4" onsubmit="enviarReserva(event, 'unas')">
-                    <input type="text" id="nomU" required placeholder="Tu Nombre Completo" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
-                    
+                    <input type="text" id="nomU" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     <input type="tel" id="telU" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     
-                    <select id="servU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none cursor-pointer">
-                        <option value="" disabled selected>Sincronizando servicios en vivo...</option>
-                    </select>
+                    <div class="relative custom-dropdown z-40">
+                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-pink-500" onclick="toggleDropdown('unas')">
+                            <span id="selected-service-unas" class="text-gray-400">Selecciona un servicio...</span>
+                            <span class="text-pink-500">▼</span>
+                        </button>
+                        <ul id="list-services-unas" class="hidden absolute w-full mt-1 bg-gray-800 border border-pink-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto"></ul>
+                        <input type="text" id="servU" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
 
-                   <div class="pt-2">
-    <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
-    <div id="contenedor-manicuristas" class="flex justify-center gap-6">
-        <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
-    </div>
-</div>
+                    <div class="pt-2 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
+                        <div id="contenedor-manicuristas" class="flex justify-center gap-4 overflow-x-auto hide-scrollbar pb-2">
+                            <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
+                        </div>
+                    </div>
 
-                    <div class="grid grid-cols-2 gap-4 pt-2">
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Fecha</label>
-                            <input type="date" id="fechaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                    <div class="pt-2 border-t border-gray-700 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">Fecha</label>
+                        <div class="flex gap-3 overflow-x-auto hide-scrollbar snap-x pb-2" id="date-container-unas"></div>
+                        <input type="text" id="fechaU" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-700 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">Hora</label>
+                        <div id="hours-container-unas" class="grid grid-cols-1">
+                            <p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg">Por favor, elige un día arriba para ver las horas disponibles.</p>
                         </div>
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-1 ml-1">Hora</label>
-                            <select id="horaU" required class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none cursor-pointer">
-                                <option value="" disabled selected>Elegir hora...</option>
-                                <option value="09:30 AM" data-time="09:30">09:30 AM</option>
-                                <option value="09:45 AM" data-time="09:45">09:45 AM</option>
-                                <option value="10:00 AM" data-time="10:00">10:00 AM</option>
-                                <option value="10:15 AM" data-time="10:15">10:15 AM</option>
-                                <option value="10:30 AM" data-time="10:30">10:30 AM</option>
-                                <option value="10:45 AM" data-time="10:45">10:45 AM</option>
-                                <option value="11:00 AM" data-time="11:00">11:00 AM</option>
-                                <option value="11:15 AM" data-time="11:15">11:15 AM</option>
-                                <option value="11:30 AM" data-time="11:30">11:30 AM</option>
-                                <option value="11:45 AM" data-time="11:45">11:45 AM</option>
-                                <option value="12:00 PM" data-time="12:00">12:00 PM</option>
-                                <option value="12:15 PM" data-time="12:15">12:15 PM</option>
-                                <option value="12:30 PM" data-time="12:30">12:30 PM</option>
-                                <option value="12:45 PM" data-time="12:45">12:45 PM</option>
-                                <option value="01:00 PM" data-time="13:00">01:00 PM</option>
-                                <option value="01:15 PM" data-time="13:15">01:15 PM</option>
-                                <option value="01:30 PM" data-time="13:30">01:30 PM</option>
-                                <option value="01:45 PM" data-time="13:45">01:45 PM</option>
-                                <option value="02:00 PM" data-time="14:00">02:00 PM</option>
-                                <option value="02:15 PM" data-time="14:15">02:15 PM</option>
-                                <option value="02:30 PM" data-time="14:30">02:30 PM</option>
-                                <option value="02:45 PM" data-time="14:45">02:45 PM</option>
-                                <option value="03:00 PM" data-time="15:00">03:00 PM</option>
-                                <option value="03:15 PM" data-time="15:15">03:15 PM</option>
-                                <option value="03:30 PM" data-time="15:30">03:30 PM</option>
-                                <option value="03:45 PM" data-time="15:45">03:45 PM</option>
-                                <option value="04:00 PM" data-time="16:00">04:00 PM</option>
-                                <option value="04:15 PM" data-time="16:15">04:15 PM</option>
-                                <option value="04:30 PM" data-time="16:30">04:30 PM</option>
-                                <option value="04:45 PM" data-time="16:45">04:45 PM</option>
-                                <option value="05:00 PM" data-time="17:00">05:00 PM</option>
-                                <option value="05:15 PM" data-time="17:15">05:15 PM</option>
-                                <option value="05:30 PM" data-time="17:30">05:30 PM</option>
-                                <option value="05:45 PM" data-time="17:45">05:45 PM</option>
-                                <option value="06:00 PM" data-time="18:00">06:00 PM</option>
-                                <option value="06:15 PM" data-time="18:15">06:15 PM</option>
-                                <option value="06:30 PM" data-time="18:30">06:30 PM</option>
-                                <option value="06:45 PM" data-time="18:45">06:45 PM</option>
-                                <option value="07:00 PM" data-time="19:00">07:00 PM</option>
-                                <option value="07:15 PM" data-time="19:15">07:15 PM</option>
-                                <option value="07:30 PM" data-time="19:30">07:30 PM</option>
-                                <option value="07:45 PM" data-time="19:45">07:45 PM</option>
-                                <option value="08:00 PM" data-time="20:00">08:00 PM</option>
-                            </select>
-                        </div>
+                        <input type="text" id="horaU" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
                     </div>
 
                     <div class="mt-6 p-4 mensaje-unas border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
@@ -395,215 +363,98 @@
                         <div>
                             <p class="text-sm text-pink-400 leading-relaxed">
                                 <span class="font-bold text-pink-500 text-base block mb-1">¡Casi listo!</span>
-                                Confirma tu cita en el botón de abajo y en breve te escribiremos por WhatsApp para asegurar este espacio perfecto para ti.
+                                Confirma tu cita abajo y en breve te escribiremos por WhatsApp.
                             </p>
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Cita</button>
+                    <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg flex justify-center items-center gap-2">
+                        <span class="btn-text">Agendar Cita</span>
+                        <svg class="animate-spin h-5 w-5 text-white hidden loader-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                 </form>
             </section>
         </div>
 
-        <div id="vista-ambos" class="hidden">
-            <h2 class="text-2xl font-bold text-center text-blue-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">La Experiencia Completa</h2>
-            
+        <div id="vista-cejas" class="hidden">
+            <h2 class="text-2xl font-bold text-center text-purple-500 mb-6 border-b border-gray-700 pb-2 max-w-5xl mx-auto">Miradas: Cejas & Pestañas</h2>
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
-                <button onclick="moverCarrusel('carrusel-ambos', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-blue-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
-                
-                <div id="carrusel-ambos" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 0)">
-                        <img src="img/ambos/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 1)">
-                        <img src="img/ambos/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 2)">
-                        <img src="img/ambos/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
-                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-blue-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('ambos', 3)">
-                        <img src="img/ambos/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover text-xs text-center p-4 transition-transform duration-500 group-hover:scale-110">
-                    </div>
+                <button onclick="moverCarrusel('carrusel-cejas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-purple-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
+                <div id="carrusel-cejas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 0)"><img src="img/cejas/foto(1).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Cejas&background=a855f7&color=fff&size=400'"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 1)"><img src="img/cejas/foto(2).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Mirada&background=a855f7&color=fff&size=400'"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 2)"><img src="img/cejas/foto(3).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Estilo&background=a855f7&color=fff&size=400'"></div>
+                    <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-purple-600 shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('cejas', 3)"><img src="img/cejas/foto(4).jpg" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.src='https://ui-avatars.com/api/?name=Pestañas&background=a855f7&color=fff&size=400'"></div>
                 </div>
-
-                <button onclick="moverCarrusel('carrusel-ambos', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-blue-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
+                <button onclick="moverCarrusel('carrusel-cejas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-purple-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
-            <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-blue-600 mb-16">
-                <h2 class="text-xl font-bold text-center mb-6 text-white">Configura tu súper combo</h2>
-                <form id="formAmbos" class="space-y-4" onsubmit="enviarReserva(event, 'ambos')">
-                    <input type="text" id="nomA" required placeholder="Tu Nombre Completo" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 outline-none">
+            <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-purple-600 mb-16">
+                <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Tu Cita</h2>
+                <form id="formCejas" class="space-y-4" onsubmit="enviarReserva(event, 'cejas')">
+                    <input type="text" id="nomC" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-purple-500 outline-none">
+                    <input type="tel" id="telC" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-purple-500 outline-none">
                     
-                    <input type="tel" id="telA" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-blue-500 outline-none">
-                    
-                    <div class="p-4 border border-yellow-600 rounded-lg">
-                        <label class="block text-yellow-500 font-bold mb-3 text-center">1. Servicio de Barbería</label>
-                        <select id="servAB" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-yellow-500 outline-none cursor-pointer">
-                            <option value="" disabled selected>Sincronizando servicios en vivo...</option>
-                        </select>
-                        
+                    <div class="relative custom-dropdown z-40">
+                        <label class="block text-[10px] text-purple-400 mb-1 ml-1 uppercase font-bold tracking-widest">Servicio de Cejas</label>
+                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-purple-500" onclick="toggleDropdown('cejas')">
+                            <span id="selected-service-cejas" class="text-gray-500 italic">Ninguno seleccionado</span>
+                            <span class="text-purple-500">▼</span>
+                        </button>
+                        <ul id="list-services-cejas" class="hidden absolute w-full mt-1 bg-gray-800 border border-purple-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[60]"></ul>
+                        <input type="text" id="servCj" value="Ninguno" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="relative custom-dropdown z-30">
+                        <label class="block text-[10px] text-indigo-400 mb-1 ml-1 uppercase font-bold tracking-widest">Servicio de Pestañas</label>
+                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-indigo-500" onclick="toggleDropdown('pestanas')">
+                            <span id="selected-service-pestanas" class="text-gray-500 italic">Ninguno seleccionado</span>
+                            <span class="text-indigo-500">▼</span>
+                        </button>
+                        <ul id="list-services-pestanas" class="hidden absolute w-full mt-1 bg-gray-800 border border-indigo-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[60]"></ul>
+                        <input type="text" id="servPs" value="Ninguno" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="pt-2 relative">
                         <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
-                        
-                        <div id="contenedor-barberos-combo" class="flex justify-center gap-4">
-    </div>
-                    </div>
-
-                    <div class="p-4 border border-pink-600 rounded-lg">
-                        <label class="block text-pink-500 font-bold mb-3 text-center">2. Manicura & Pedicura</label>
-                        <select id="servAU" required class="w-full p-3 mb-4 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none cursor-pointer">
-                            <option value="" disabled selected>Sincronizando servicios en vivo...</option>
-                        </select>
-                        
-                        <label class="block text-sm text-gray-400 mb-3 text-center">¿Con quién te atiendes?</label>
-
-                        <div id="contenedor-manicuristas-combo" class="flex justify-center gap-4">
-    </div>
-                    </div>
-
-                    <div class="flex items-center justify-center space-x-2 mt-4">
-                        <input type="checkbox" id="mismaFecha" checked onchange="toggleFechas()" class="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
-                        <label for="mismaFecha" class="text-gray-300 text-sm font-medium cursor-pointer">Usar la misma fecha y hora para ambos</label>
-                    </div>
-
-                    <div class="p-4 bg-gray-900 rounded-lg border border-blue-500 transition-all duration-300 mt-4">
-                        <div id="boxFechaA">
-                            <label id="labelFechaA" class="block text-blue-400 text-sm mb-2 text-center">Selecciona Fecha y Hora del Combo</label>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Fecha</label>
-                                    <input type="date" id="fechaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Hora</label>
-                                    <select id="horaA" required class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-blue-500 outline-none cursor-pointer">
-                                        <option value="" disabled selected>Elegir hora...</option>
-                                        <option value="09:30 AM" data-time="09:30">09:30 AM</option>
-                                        <option value="09:45 AM" data-time="09:45">09:45 AM</option>
-                                        <option value="10:00 AM" data-time="10:00">10:00 AM</option>
-                                        <option value="10:15 AM" data-time="10:15">10:15 AM</option>
-                                        <option value="10:30 AM" data-time="10:30">10:30 AM</option>
-                                        <option value="10:45 AM" data-time="10:45">10:45 AM</option>
-                                        <option value="11:00 AM" data-time="11:00">11:00 AM</option>
-                                        <option value="11:15 AM" data-time="11:15">11:15 AM</option>
-                                        <option value="11:30 AM" data-time="11:30">11:30 AM</option>
-                                        <option value="11:45 AM" data-time="11:45">11:45 AM</option>
-                                        <option value="12:00 PM" data-time="12:00">12:00 PM</option>
-                                        <option value="12:15 PM" data-time="12:15">12:15 PM</option>
-                                        <option value="12:30 PM" data-time="12:30">12:30 PM</option>
-                                        <option value="12:45 PM" data-time="12:45">12:45 PM</option>
-                                        <option value="01:00 PM" data-time="13:00">01:00 PM</option>
-                                        <option value="01:15 PM" data-time="13:15">01:15 PM</option>
-                                        <option value="01:30 PM" data-time="13:30">01:30 PM</option>
-                                        <option value="01:45 PM" data-time="13:45">01:45 PM</option>
-                                        <option value="02:00 PM" data-time="14:00">02:00 PM</option>
-                                        <option value="02:15 PM" data-time="14:15">02:15 PM</option>
-                                        <option value="02:30 PM" data-time="14:30">02:30 PM</option>
-                                        <option value="02:45 PM" data-time="14:45">02:45 PM</option>
-                                        <option value="03:00 PM" data-time="15:00">03:00 PM</option>
-                                        <option value="03:15 PM" data-time="15:15">03:15 PM</option>
-                                        <option value="03:30 PM" data-time="15:30">03:30 PM</option>
-                                        <option value="03:45 PM" data-time="15:45">03:45 PM</option>
-                                        <option value="04:00 PM" data-time="16:00">04:00 PM</option>
-                                        <option value="04:15 PM" data-time="16:15">04:15 PM</option>
-                                        <option value="04:30 PM" data-time="16:30">04:30 PM</option>
-                                        <option value="04:45 PM" data-time="16:45">04:45 PM</option>
-                                        <option value="05:00 PM" data-time="17:00">05:00 PM</option>
-                                        <option value="05:15 PM" data-time="17:15">05:15 PM</option>
-                                        <option value="05:30 PM" data-time="17:30">05:30 PM</option>
-                                        <option value="05:45 PM" data-time="17:45">05:45 PM</option>
-                                        <option value="06:00 PM" data-time="18:00">06:00 PM</option>
-                                        <option value="06:15 PM" data-time="18:15">06:15 PM</option>
-                                        <option value="06:30 PM" data-time="18:30">06:30 PM</option>
-                                        <option value="06:45 PM" data-time="18:45">06:45 PM</option>
-                                        <option value="07:00 PM" data-time="19:00">07:00 PM</option>
-                                        <option value="07:15 PM" data-time="19:15">07:15 PM</option>
-                                        <option value="07:30 PM" data-time="19:30">07:30 PM</option>
-                                        <option value="07:45 PM" data-time="19:45">07:45 PM</option>
-                                        <option value="08:00 PM" data-time="20:00">08:00 PM</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="boxFechaU" class="hidden mt-4 pt-4 border-t border-gray-700">
-                            <label class="block text-pink-400 text-sm mb-2 text-center">Fecha y Hora para Manicura/Pedicura</label>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Fecha</label>
-                                    <input type="date" id="fechaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Hora</label>
-                                    <select id="horaA_U" class="w-full p-3 rounded-lg bg-gray-700 text-white focus:border-pink-500 outline-none cursor-pointer">
-                                        <option value="" disabled selected>Elegir hora...</option>
-                                        <option value="09:30 AM" data-time="09:30">09:30 AM</option>
-                                        <option value="09:45 AM" data-time="09:45">09:45 AM</option>
-                                        <option value="10:00 AM" data-time="10:00">10:00 AM</option>
-                                        <option value="10:15 AM" data-time="10:15">10:15 AM</option>
-                                        <option value="10:30 AM" data-time="10:30">10:30 AM</option>
-                                        <option value="10:45 AM" data-time="10:45">10:45 AM</option>
-                                        <option value="11:00 AM" data-time="11:00">11:00 AM</option>
-                                        <option value="11:15 AM" data-time="11:15">11:15 AM</option>
-                                        <option value="11:30 AM" data-time="11:30">11:30 AM</option>
-                                        <option value="11:45 AM" data-time="11:45">11:45 AM</option>
-                                        <option value="12:00 PM" data-time="12:00">12:00 PM</option>
-                                        <option value="12:15 PM" data-time="12:15">12:15 PM</option>
-                                        <option value="12:30 PM" data-time="12:30">12:30 PM</option>
-                                        <option value="12:45 PM" data-time="12:45">12:45 PM</option>
-                                        <option value="01:00 PM" data-time="13:00">01:00 PM</option>
-                                        <option value="01:15 PM" data-time="13:15">01:15 PM</option>
-                                        <option value="01:30 PM" data-time="13:30">01:30 PM</option>
-                                        <option value="01:45 PM" data-time="13:45">01:45 PM</option>
-                                        <option value="02:00 PM" data-time="14:00">02:00 PM</option>
-                                        <option value="02:15 PM" data-time="14:15">02:15 PM</option>
-                                        <option value="02:30 PM" data-time="14:30">02:30 PM</option>
-                                        <option value="02:45 PM" data-time="14:45">02:45 PM</option>
-                                        <option value="03:00 PM" data-time="15:00">03:00 PM</option>
-                                        <option value="03:15 PM" data-time="15:15">03:15 PM</option>
-                                        <option value="03:30 PM" data-time="15:30">03:30 PM</option>
-                                        <option value="03:45 PM" data-time="15:45">03:45 PM</option>
-                                        <option value="04:00 PM" data-time="16:00">04:00 PM</option>
-                                        <option value="04:15 PM" data-time="16:15">04:15 PM</option>
-                                        <option value="04:30 PM" data-time="16:30">04:30 PM</option>
-                                        <option value="04:45 PM" data-time="16:45">04:45 PM</option>
-                                        <option value="05:00 PM" data-time="17:00">05:00 PM</option>
-                                        <option value="05:15 PM" data-time="17:15">05:15 PM</option>
-                                        <option value="05:30 PM" data-time="17:30">05:30 PM</option>
-                                        <option value="05:45 PM" data-time="17:45">05:45 PM</option>
-                                        <option value="06:00 PM" data-time="18:00">06:00 PM</option>
-                                        <option value="06:15 PM" data-time="18:15">06:15 PM</option>
-                                        <option value="06:30 PM" data-time="18:30">06:30 PM</option>
-                                        <option value="06:45 PM" data-time="18:45">06:45 PM</option>
-                                        <option value="07:00 PM" data-time="19:00">07:00 PM</option>
-                                        <option value="07:15 PM" data-time="19:15">07:15 PM</option>
-                                        <option value="07:30 PM" data-time="19:30">07:30 PM</option>
-                                        <option value="07:45 PM" data-time="19:45">07:45 PM</option>
-                                        <option value="08:00 PM" data-time="20:00">08:00 PM</option>
-                                    </select>
-                                </div>
-                            </div>
+                        <div id="contenedor-cejas" class="flex justify-center gap-4 overflow-x-auto hide-scrollbar pb-2">
+                            <p class="text-gray-500 text-xs animate-pulse">Cargando equipo...</p>
                         </div>
                     </div>
 
-                    <div class="mt-6 p-4 mensaje-ambos border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
+                    <div class="pt-2 border-t border-gray-700 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">Fecha</label>
+                        <div class="flex gap-3 overflow-x-auto hide-scrollbar snap-x pb-2" id="date-container-cejas"></div>
+                        <input type="text" id="fechaC" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-700 relative">
+                        <label class="block text-sm text-gray-400 mb-3 text-center">Hora</label>
+                        <div id="hours-container-cejas" class="grid grid-cols-1">
+                            <p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg">Por favor, elige un día arriba para ver las horas disponibles.</p>
+                        </div>
+                        <input type="text" id="horaC" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="mt-6 p-4 mensaje-cejas border-2 rounded-xl flex items-start space-x-3 transition-all duration-300 hover:scale-[1.02]">
                         <div class="flex-shrink-0">
-                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                         <div>
-                            <p class="text-sm text-blue-400 leading-relaxed">
-                                <span class="font-bold text-blue-500 text-base block mb-1">¡Casi listo!</span>
-                                Confirma tu cita en el botón de abajo y en breve te escribiremos por WhatsApp para asegurar este espacio perfecto para ti.
+                            <p class="text-sm text-purple-400 leading-relaxed">
+                                <span class="font-bold text-purple-500 text-base block mb-1">¡Casi listo!</span>
+                                Confirma tu cita abajo y en breve te escribiremos por WhatsApp.
                             </p>
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg">Confirmar Combo Completo</button>
+                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg flex justify-center items-center gap-2">
+                        <span class="btn-text">Agendar Cita</span>
+                        <svg class="animate-spin h-5 w-5 text-white hidden loader-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                 </form>
             </section>
         </div>  
-
     </div>
 
     <footer class="bg-gray-950 border-t border-gray-800 py-12 mt-12 pb-32 text-center">
@@ -627,6 +478,140 @@
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwqvwGf_vfvzuWHVUGiTlZA45BTiT34mhbXGH85QtUKIQ64PMePrThRson2fFXheFbn/exec";
         const TELEFONO = "573133454273";
 
+        function generarFechas() {
+            const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            const views = [
+                { tipo: 'barberia', theme: { border: 'peer-checked:border-yellow-500', bg: 'peer-checked:bg-yellow-600/20', text: 'peer-checked:text-yellow-500' } },
+                { tipo: 'unas', theme: { border: 'peer-checked:border-pink-500', bg: 'peer-checked:bg-pink-600/20', text: 'peer-checked:text-pink-500' } },
+                { tipo: 'cejas', theme: { border: 'peer-checked:border-purple-500', bg: 'peer-checked:bg-purple-600/20', text: 'peer-checked:text-purple-500' } }
+            ];
+
+            let htmlFechas = [];
+            for(let i = 0; i < 15; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() + i);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                let diaTexto = dias[d.getDay()];
+                if (i === 0) diaTexto = "Hoy";
+                else if (i === 1) diaTexto = "Mañana";
+                htmlFechas.push({ dateStr, diaTexto, diaNum: d.getDate(), mesTexto: meses[d.getMonth()], diaSemana: d.getDay() });
+            }
+
+            views.forEach(v => {
+                const container = document.getElementById(`date-container-${v.tipo}`);
+                if(container) {
+                    container.innerHTML = htmlFechas.map(d => `
+                        <label class="cursor-pointer flex-none snap-center group w-[72px]">
+                            <input type="radio" name="r-date-${v.tipo}" value="${d.dateStr}" data-dia-semana="${d.diaSemana}" class="peer sr-only" onchange="actualizarHoras('${d.dateStr}', '${v.tipo}', ${d.diaSemana})">
+                            <div class="px-2 py-3 bg-gray-800 border border-gray-600 rounded-xl ${v.theme.bg} ${v.theme.border} text-center transition-all duration-300">
+                                <p class="text-[11px] text-gray-400 ${v.theme.text} font-medium mb-1">${d.diaTexto}</p>
+                                <p class="text-xl font-bold text-gray-200 peer-checked:text-white">${d.diaNum}</p>
+                                <p class="text-[10px] text-gray-500 peer-checked:text-gray-300 uppercase mt-1">${d.mesTexto}</p>
+                            </div>
+                        </label>
+                    `).join('');
+                }
+            });
+        }
+
+        window.actualizarHoras = function(fechaStr, tipo, diaSemana) {
+            document.getElementById(`fecha${tipo.charAt(0).toUpperCase()}`).value = fechaStr; 
+            
+            const profName = tipo === 'barberia' ? 'profB' : (tipo === 'unas' ? 'profU' : 'profC');
+            const profSeleccionado = document.querySelector(`input[name="${profName}"]:checked`);
+            
+            let enDescanso = false;
+            let nombreProf = "";
+            
+            if (profSeleccionado) {
+                nombreProf = profSeleccionado.value;
+                const descansos = JSON.parse(profSeleccionado.getAttribute('data-descansos') || '[]');
+                if (descansos.includes(fechaStr)) {
+                    enDescanso = true;
+                }
+            }
+
+            const container = document.getElementById(`hours-container-${tipo}`);
+            document.getElementById(`hora${tipo.charAt(0).toUpperCase()}`).value = ""; 
+
+            if (enDescanso) {
+                container.innerHTML = `
+                    <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
+                        <span class="text-2xl block mb-2">🏖️</span>
+                        <p class="text-gray-200 font-bold text-sm">${nombreProf} está de descanso</p>
+                        <p class="text-gray-400 text-xs mt-1">Este profesional no está disponible hoy. Elige otro día u otro profesional.</p>
+                    </div>
+                `;
+                container.className = "grid grid-cols-1"; 
+                return;
+            }
+
+            const colors = {
+                barberia: { bg: 'peer-checked:bg-yellow-600', border: 'peer-checked:border-yellow-500', hover: 'hover:border-yellow-500' },
+                unas: { bg: 'peer-checked:bg-pink-600', border: 'peer-checked:border-pink-500', hover: 'hover:border-pink-500' },
+                cejas: { bg: 'peer-checked:bg-purple-600', border: 'peer-checked:border-purple-500', hover: 'hover:border-purple-500' }
+            };
+            const c = colors[tipo];
+            
+            const ahora = new Date();
+            const esHoy = (fechaStr === `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`);
+            
+            const horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+            
+            let timeSlots = [];
+            let [h, m] = horaApertura.split(':').map(Number);
+            
+            while (h < 20 || (h === 20 && m === 0)) {
+                const hora24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const h12 = h % 12 || 12;
+                const hora12 = `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+                
+                let pasada = false;
+                if (esHoy) {
+                    const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+                    if (hora24 <= horaActual) pasada = true;
+                }
+
+                if (!pasada) timeSlots.push(hora12);
+                
+                m += 15;
+                if (m === 60) { h++; m = 0; }
+            }
+
+            if (timeSlots.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
+                        <span class="text-2xl block mb-1">🚫</span>
+                        <p class="text-gray-300 font-bold text-sm">Cerrado por hoy</p>
+                        <p class="text-gray-500 text-xs mt-1">Ya cerramos o no hay más citas disponibles. Elige otro día arriba.</p>
+                    </div>
+                `;
+                container.className = "grid grid-cols-1"; 
+            } else {
+                container.className = "grid grid-cols-3 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto pr-2 custom-scroll"; 
+                container.innerHTML = timeSlots.map(t => `
+                    <label class="cursor-pointer">
+                        <input type="radio" name="r-hour-${tipo}" value="${t}" class="peer sr-only" onchange="document.getElementById('hora${tipo.charAt(0).toUpperCase()}').value = this.value">
+                        <div class="py-2 text-center border border-gray-600 bg-gray-700 rounded-lg ${c.bg} ${c.border} peer-checked:text-white text-gray-300 font-medium text-xs transition-all ${c.hover} shadow-sm">
+                            ${t}
+                        </div>
+                    </label>
+                `).join('');
+            }
+        }
+
+        window.verificarDisponibilidad = function(tipo) {
+            const radioDia = document.querySelector(`input[name="r-date-${tipo}"]:checked`);
+            if (radioDia) {
+                const fechaStr = radioDia.value;
+                const diaSemana = parseInt(radioDia.getAttribute('data-dia-semana'));
+                actualizarHoras(fechaStr, tipo, diaSemana);
+            }
+        }
+
         let titleText = document.title + "   ";
         function scrollTitle() {
             titleText = titleText.substring(1) + titleText.substring(0, 1);
@@ -635,65 +620,6 @@
         setInterval(scrollTitle, 300);
 
         window.onload = function() {
-            const hoy = new Date();
-            const año = hoy.getFullYear();
-            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-            const dia = String(hoy.getDate()).padStart(2, '0');
-            const fechaActual = `${año}-${mes}-${dia}`;
-
-            const inputsFechas = ['fechaB', 'fechaU', 'fechaA', 'fechaA_U'];
-            const inputsHoras = ['horaB', 'horaU', 'horaA', 'horaA_U'];
-
-            inputsFechas.forEach((idFecha, index) => {
-                const inputFecha = document.getElementById(idFecha);
-                const inputHora = document.getElementById(inputsHoras[index]);
-
-                if(inputFecha && inputHora) {
-                    inputFecha.min = fechaActual;
-
-                    inputFecha.addEventListener('change', function() {
-                        const ahora = new Date();
-                        const fechaSeleccionadaStr = this.value;
-                        const fechaHoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
-
-                        const fechaObj = new Date(fechaSeleccionadaStr + 'T00:00:00');
-                        const diaSemana = fechaObj.getDay(); 
-
-                        let horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
-                        let minTimeStr = horaApertura;
-
-                        if (fechaSeleccionadaStr === fechaHoyStr) {
-                            const horasActual = String(ahora.getHours()).padStart(2, '0');
-                            const minutosActual = String(ahora.getMinutes()).padStart(2, '0');
-                            const horaActualStr = `${horasActual}:${minutosActual}`;
-
-                            if (horaActualStr > horaApertura) {
-                                minTimeStr = horaActualStr;
-                            }
-                        }
-
-                        // Filtrar opciones pasadas si es hoy
-                        Array.from(inputHora.options).forEach(opt => {
-                            if(opt.dataset.time) {
-                                if(opt.dataset.time < minTimeStr) {
-                                    opt.disabled = true;
-                                    opt.style.display = 'none';
-                                } else {
-                                    opt.disabled = false;
-                                    opt.style.display = '';
-                                }
-                            }
-                        });
-
-                        // Limpiar selección si la hora actual ya pasó
-                        if(inputHora.selectedOptions.length > 0 && inputHora.selectedOptions[0].disabled) {
-                            inputHora.value = "";
-                        }
-                    });
-                }
-            });
-
-            // INICIAR AUTO-SCROLL
             iniciarAutoScroll();
             configurarPausaCarrusel();
         };
@@ -701,7 +627,7 @@
         function mostrarSeccion(seccion) {
             document.getElementById('vista-barberia').classList.add('hidden');
             document.getElementById('vista-unas').classList.add('hidden');
-            document.getElementById('vista-ambos').classList.add('hidden');
+            document.getElementById('vista-cejas').classList.add('hidden');
             
             document.getElementById('vista-' + seccion).classList.remove('hidden');
             
@@ -719,83 +645,62 @@
                     particleCount: 30, spread: 70, origin: { y: 0.4 },
                     shapes: [icono1, icono2], scalar: 2.5, ticks: 600, gravity: 0.7, startVelocity: 35
                 });
-            } else if (seccion === 'ambos') {
-                const icono1 = confetti.shapeFromText({ text: '💈' });
-                const icono2 = confetti.shapeFromText({ text: '💅' });
-                const icono3 = confetti.shapeFromText({ text: '🔥' });
+            } else if (seccion === 'cejas') {
+                const icono1 = confetti.shapeFromText({ text: '✨' });
+                const icono2 = confetti.shapeFromText({ text: '👁️' });
                 confetti({
-                    particleCount: 45, spread: 100, origin: { y: 0.4 },
-                    shapes: [icono1, icono2, icono3], scalar: 2.5, ticks: 600, gravity: 0.7, startVelocity: 35
+                    particleCount: 30, spread: 70, origin: { y: 0.4 },
+                    shapes: [icono1, icono2], scalar: 2.5, ticks: 600, gravity: 0.7, startVelocity: 35
                 });
             }
 
             document.getElementById('zona-dinamica').scrollIntoView({ behavior: 'smooth' });
         }
 
-        function toggleFechas() {
-            const checkbox = document.getElementById('mismaFecha');
-            const boxUñas = document.getElementById('boxFechaU');
-            const labelA = document.getElementById('labelFechaA');
-            const fechaU = document.getElementById('fechaA_U');
-            const horaU = document.getElementById('horaA_U');
-
-            if (checkbox.checked) {
-                boxUñas.classList.add('hidden');
-                labelA.innerText = "Selecciona Fecha y Hora del Combo";
-                labelA.classList.remove('text-yellow-500');
-                labelA.classList.add('text-blue-400');
-                fechaU.required = false;
-                horaU.required = false;
-            } else {
-                boxUñas.classList.remove('hidden');
-                labelA.innerText = "Fecha y Hora para Barbería";
-                labelA.classList.remove('text-blue-400');
-                labelA.classList.add('text-yellow-500');
-                fechaU.required = true;
-                horaU.required = true;
-            }
-        }
-
         async function enviarReserva(e, tipo) {
             e.preventDefault();
             
             let btn = e.target.querySelector('button[type="submit"]');
-            let textoOriginal = btn.innerText;
+            let spinner = btn.querySelector('.loader-icon');
+            let txtBtn = btn.querySelector('.btn-text');
+            let textoOriginal = txtBtn.innerText;
             
-            btn.innerText = "Procesando cita...";
-            btn.disabled = true;
+            let nomID = tipo === 'barberia' ? 'nomB' : (tipo === 'unas' ? 'nomU' : 'nomC');
+            let telID = tipo === 'barberia' ? 'telB' : (tipo === 'unas' ? 'telU' : 'telC');
+            let profName = tipo === 'barberia' ? 'profB' : (tipo === 'unas' ? 'profU' : 'profC');
+            let fechaID = tipo === 'barberia' ? 'fechaB' : (tipo === 'unas' ? 'fechaU' : 'fechaC');
+            let horaID = tipo === 'barberia' ? 'horaB' : (tipo === 'unas' ? 'horaU' : 'horaC');
 
-            let datos = {};
+            let datos = {
+                nombre: document.getElementById(nomID).value,
+                celular: document.getElementById(telID).value,
+                servicio: "", 
+                profesional: document.querySelector(`input[name="${profName}"]:checked`)?.value,
+                fecha: document.getElementById(fechaID).value,
+                hora: document.getElementById(horaID).value
+            };
 
-            if (tipo === 'barberia') {
-                datos.nombre = document.getElementById('nomB').value;
-                datos.celular = document.getElementById('telB').value;
-                datos.servicio = document.getElementById('servB').value;
-                datos.profesional = document.querySelector('input[name="profB"]:checked').value;
-                datos.fecha = document.getElementById('fechaB').value;
-                datos.hora = document.getElementById('horaB').value;
-            } else if (tipo === 'unas') {
-                datos.nombre = document.getElementById('nomU').value;
-                datos.celular = document.getElementById('telU').value;
-                datos.servicio = document.getElementById('servU').value;
-                datos.profesional = document.querySelector('input[name="profU"]:checked').value;
-                datos.fecha = document.getElementById('fechaU').value;
-                datos.hora = document.getElementById('horaU').value;
-            } else if (tipo === 'ambos') {
-                datos.nombre = document.getElementById('nomA').value;
-                datos.celular = document.getElementById('telA').value;
-                datos.servicio = document.getElementById('servAB').value + " + " + document.getElementById('servAU').value;
-                datos.profesional = document.querySelector('input[name="profAB"]:checked').value + " y " + document.querySelector('input[name="profAU"]:checked').value;
-                
-                const usaMismaFecha = document.getElementById('mismaFecha').checked;
-                if (usaMismaFecha) {
-                    datos.fecha = document.getElementById('fechaA').value;
-                    datos.hora = document.getElementById('horaA').value;
-                } else {
-                    datos.fecha = `Barbería: ${document.getElementById('fechaA').value} | Uñas: ${document.getElementById('fechaA_U').value}`;
-                    datos.hora = `Barbería: ${document.getElementById('horaA').value} | Uñas: ${document.getElementById('horaA_U').value}`;
+            if (tipo === 'cejas') {
+                const sCj = document.getElementById('servCj').value;
+                const sPs = document.getElementById('servPs').value;
+
+                if (sCj === 'Ninguno' && sPs === 'Ninguno') {
+                    alert("Por favor selecciona al menos un servicio (Cejas o Pestañas).");
+                    return;
                 }
+
+                if (sCj === 'Ninguno') datos.servicio = sPs;
+                else if (sPs === 'Ninguno') datos.servicio = sCj;
+                else datos.servicio = `${sCj} + ${sPs}`;
+
+            } else {
+                const servID = tipo === 'barberia' ? 'servB' : 'servU';
+                datos.servicio = document.getElementById(servID).value;
             }
+
+            txtBtn.innerText = "Procesando...";
+            spinner.classList.remove('hidden');
+            btn.disabled = true;
 
             try {
                 await fetch(WEB_APP_URL, {
@@ -803,39 +708,35 @@
                     body: JSON.stringify(datos), headers: { 'Content-Type': 'application/json' }
                 });
 
-                btn.innerText = "¡Cita Confirmada! 🎉";
-                btn.classList.remove('bg-yellow-600', 'bg-pink-600', 'bg-blue-600', 'hover:bg-yellow-500', 'hover:bg-pink-500', 'hover:bg-blue-500');
-                btn.classList.add('bg-green-500', 'hover:bg-green-400');
+                txtBtn.innerText = "¡Cita Confirmada! 🎉";
+                spinner.classList.add('hidden');
+                btn.classList.remove('bg-yellow-600', 'bg-pink-600', 'bg-purple-600');
+                btn.classList.add('bg-green-500');
 
-                confetti({
-                    particleCount: 150, spread: 80, origin: { y: 0.6 },
-                    colors: ['#eab308', '#ec4899', '#3b82f6', '#ffffff'],
-                    ticks: 600, gravity: 0.7 
-                });
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
 
                 setTimeout(() => {
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A%0A_(Quedo atento a la confirmación de disponibilidad)_`;
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A%0A_(Quedo atento a la confirmación)_`;
                     window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
                     setTimeout(() => {
-                        btn.innerText = textoOriginal;
+                        txtBtn.innerText = textoOriginal;
                         btn.disabled = false;
-                        btn.classList.remove('bg-green-500', 'hover:bg-green-400');
-                        if(tipo === 'barberia') btn.classList.add('bg-yellow-600', 'hover:bg-yellow-500');
-                        if(tipo === 'unas') btn.classList.add('bg-pink-600', 'hover:bg-pink-500');
-                        if(tipo === 'ambos') btn.classList.add('bg-blue-600', 'hover:bg-blue-500');
+                        btn.classList.remove('bg-green-500');
+                        if(tipo === 'barberia') btn.classList.add('bg-yellow-600');
+                        if(tipo === 'unas') btn.classList.add('bg-pink-600');
+                        if(tipo === 'cejas') btn.classList.add('bg-purple-600');
                     }, 2000);
-
                 }, 2500);
 
             } catch (error) {
-                alert("Hubo un error al guardar la cita.");
-                btn.innerText = textoOriginal;
+                alert("Error al guardar la cita.");
+                txtBtn.innerText = textoOriginal;
+                spinner.classList.add('hidden');
                 btn.disabled = false;
             }
         }
 
-        // --- LÓGICA DEL LIGHTBOX (Galería a Pantalla Completa) ---
         let currentGroup = '';
         let currentIndex = 0;
         let imagesList = [];
@@ -843,34 +744,19 @@
         function abrirLightbox(grupo, indice) {
             currentGroup = grupo;
             currentIndex = indice;
-            
             const imgs = document.querySelectorAll(`#vista-${grupo} .galeria-img`);
             imagesList = Array.from(imgs).map(img => img.src);
-            
             const lightbox = document.getElementById('lightbox');
-            const closeBtn = document.getElementById('lb-close');
-            const prevBtn = document.getElementById('lb-prev');
-            const nextBtn = document.getElementById('lb-next');
-            
-            const colorClasses = ['text-yellow-500', 'text-pink-500', 'text-blue-500', 'text-white'];
-            [closeBtn, prevBtn, nextBtn].forEach(btn => {
-                btn.classList.remove(...colorClasses);
-                if(grupo === 'barberia') btn.classList.add('text-yellow-500');
-                else if(grupo === 'unas') btn.classList.add('text-pink-500');
-                else if(grupo === 'ambos') btn.classList.add('text-blue-500');
-                else btn.classList.add('text-white');
-            });
-
             document.getElementById('lb-imagen').src = imagesList[currentIndex];
             lightbox.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; 
-            pausarAutoScroll(); // Pausa el carrusel de fondo al abrir imagen
+            pausarAutoScroll(); 
         }
 
         function cerrarLightbox() {
             document.getElementById('lightbox').classList.add('hidden');
             document.body.style.overflow = 'auto'; 
-            reanudarAutoScroll(); // Reanuda al cerrar
+            reanudarAutoScroll(); 
         }
 
         function cambiarFoto(dir, event) {
@@ -881,12 +767,11 @@
             document.getElementById('lb-imagen').src = imagesList[currentIndex];
         }
 
-        // --- LÓGICA DE AUTO-SCROLL Y PAUSA TÁCTIL ---
         let intervaloAutoScroll;
 
         function iniciarAutoScroll() {
             intervaloAutoScroll = setInterval(() => {
-                ['carrusel-barberia', 'carrusel-unas', 'carrusel-ambos'].forEach(id => {
+                ['carrusel-barberia', 'carrusel-unas', 'carrusel-cejas'].forEach(id => {
                     const contenedor = document.getElementById(id);
                     if (contenedor && !contenedor.closest('.hidden')) {
                         const elemento = contenedor.querySelector('div');
@@ -903,17 +788,11 @@
             }, 3000); 
         }
 
-        function pausarAutoScroll() {
-            clearInterval(intervaloAutoScroll);
-        }
-
-        function reanudarAutoScroll() {
-            pausarAutoScroll(); 
-            iniciarAutoScroll();
-        }
+        function pausarAutoScroll() { clearInterval(intervaloAutoScroll); }
+        function reanudarAutoScroll() { pausarAutoScroll(); iniciarAutoScroll(); }
 
         function configurarPausaCarrusel() {
-            ['carrusel-barberia', 'carrusel-unas', 'carrusel-ambos'].forEach(id => {
+            ['carrusel-barberia', 'carrusel-unas', 'carrusel-cejas'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.addEventListener('mouseenter', pausarAutoScroll);
@@ -931,7 +810,7 @@
                 const itemWidth = elemento.offsetWidth + 16; 
                 contenedor.scrollBy({ left: itemWidth * direccion, behavior: 'smooth' });
             }
-            reanudarAutoScroll(); // Reinicia el tiempo para que no salte de golpe tras presionar el botón
+            reanudarAutoScroll(); 
         }
     </script>
 </body>
