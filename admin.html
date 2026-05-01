@@ -11,6 +11,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
@@ -25,169 +26,261 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth();
         const db = getFirestore();
+        const storage = getStorage();
 
-        window.login = async () => {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('pass').value;
-            const btn = document.getElementById('btn-login');
-            btn.innerText = "Verificando...";
-            try {
-                await signInWithEmailAndPassword(auth, email, pass);
-            } catch (e) { 
-                alert("Acceso denegado: Verifica tu correo y contraseña.");
-                btn.innerText = "Entrar al Panel";
-            }
+        window.showSection = (sectionId) => {
+            document.querySelectorAll('.admin-page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            toggleMenu(false);
         };
 
-        window.logout = () => signOut(auth);
+        window.toggleMenu = (open) => {
+            const menu = document.getElementById('side-menu');
+            menu.style.transform = open ? 'translateX(0)' : 'translateX(-100%)';
+        };
+
+        // --- SUBIDA DE VIDEO DIRECTO A FIREBASE ---
+        window.subirVideoArchivo = async () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'video/mp4,video/x-m4v,video/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                
+                if(file.size > 40 * 1024 * 1024) {
+                    alert("El video es muy pesado. Intenta que pese menos de 40MB para que la web cargue rápido.");
+                    return;
+                }
+
+                const btn = document.getElementById('btn-subir-video');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "⏳ Subiendo y procesando...";
+                
+                try {
+                    const storageRef = ref(storage, `video/bienvenida_${Date.now()}.mp4`);
+                    await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(storageRef);
+                    
+                    const docRef = doc(db, "configuracion", "negocio");
+                    const snap = await getDoc(docRef);
+                    const data = snap.data();
+                    data.videoUrl = url;
+                    await setDoc(docRef, data);
+                    
+                    btn.innerHTML = "✅ ¡Video Listo en la Web!";
+                    setTimeout(() => btn.innerHTML = originalText, 4000);
+                } catch (err) {
+                    console.error(err);
+                    alert("Error: " + err.message);
+                    btn.innerHTML = "❌ Error al subir";
+                    setTimeout(() => btn.innerHTML = originalText, 3000);
+                }
+            };
+            input.click();
+        };
+
+        async function comprimirImagen(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxW = 500; 
+                        const scale = maxW / img.width;
+                        canvas.width = maxW;
+                        canvas.height = img.height * scale;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.8);
+                    };
+                };
+            });
+        }
+
+        window.subirFotoEquipo = async (cat, index) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const btn = document.getElementById(`btn-foto-${cat}-${index}`);
+                btn.innerHTML = "⏳"; 
+                try {
+                    const blob = await comprimirImagen(file);
+                    const fileName = `equipo/${cat}_${index}_${Date.now()}.jpg`;
+                    const storageRef = ref(storage, fileName);
+                    
+                    await uploadBytes(storageRef, blob);
+                    const url = await getDownloadURL(storageRef);
+                    
+                    const docRef = doc(db, "configuracion", "negocio");
+                    const snap = await getDoc(docRef);
+                    const data = snap.data();
+                    data.equipo[cat][index].foto = url;
+                    await setDoc(docRef, data);
+                    
+                    btn.innerHTML = "✅"; 
+                } catch (err) { 
+                    console.error("Error detallado:", err);
+                    alert("Error al subir: " + err.message); 
+                    btn.innerHTML = "📷"; 
+                }
+            };
+            input.click();
+        };
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('admin-section').classList.remove('hidden');
+                document.getElementById('admin-layout').classList.remove('hidden');
                 escucharDatos();
             } else {
                 document.getElementById('login-section').classList.remove('hidden');
-                document.getElementById('admin-section').classList.add('hidden');
+                document.getElementById('admin-layout').classList.add('hidden');
             }
         });
 
+        window.login = async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('pass').value;
+            try { await signInWithEmailAndPassword(auth, email, pass); } catch (e) { alert("Acceso denegado"); }
+        };
+
+        window.logout = () => signOut(auth);
+
         function escucharDatos() {
             onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
-                if (snapshot.exists() && snapshot.data().barberia) {
+                if (snapshot.exists()) {
                     const data = snapshot.data();
                     renderizarInterfaz(data);
-                    actualizarEstadisticas(data.stats || { barberia: 50, unas: 50 });
-                } else {
-                    inicializarNegocio();
+                    actualizarEstadisticas(data.stats || { barberia: 33, unas: 33, cejas: 34 });
                 }
             });
         }
 
-        async function inicializarNegocio() {
-            const base = {
-                barberia: [
-                    { nombre: "Corte Caballero", precio: 19000 },
-                    { nombre: "Corte y Barba", precio: 25000 }
-                ],
-                unas: [
-                    { nombre: "Tradicional", precio: 17000 },
-                    { nombre: "Semi-Permanente", precio: 35000 }
-                ],
-                equipo: {
-                    barberia: [{ nombre: "Santiago", foto: "img/equipo/santiago.jpg" }, { nombre: "Armando", foto: "img/equipo/armando.jpg" }],
-                    unas: [{ nombre: "Valentina", foto: "img/equipo/valentina.jpg" }, { nombre: "Anguie", foto: "img/equipo/anguie.jpg" }]
-                },
-                stats: { barberia: 50, unas: 50 }
-            };
-            await setDoc(doc(db, "configuracion", "negocio"), base);
-        }
-
         function renderizarInterfaz(data) {
-            // Renderizar Servicios
-            document.getElementById('lista-barberia').innerHTML = data.barberia.map((s, i) => `
-                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
-                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-yellow-500">
-                    <input type="number" value="${s.precio}" onchange="cambiarServicio('barberia', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-yellow-500 font-bold outline-none focus:border-yellow-500">
-                    <button onclick="eliminarServicio('barberia', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
-                </div>
-            `).join('');
+            const renderLista = (id, lista, cat, color) => {
+                document.getElementById(id).innerHTML = (lista || []).map((s, i) => `
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" value="${s.nombre}" onchange="cambiarServicio('${cat}', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-${color}-500">
+                        <input type="number" value="${s.precio}" onchange="cambiarServicio('${cat}', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-${color}-500 font-bold outline-none">
+                        <button onclick="eliminarServicio('${cat}', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded">✕</button>
+                    </div>
+                `).join('');
+            };
+            renderLista('lista-barberia', data.barberia, 'barberia', 'yellow');
+            renderLista('lista-unas', data.unas, 'unas', 'pink');
+            renderLista('lista-cejas', data.cejas, 'cejas', 'purple');
+            renderLista('lista-pestanas', data.pestanas, 'pestanas', 'indigo');
 
-            document.getElementById('lista-unas').innerHTML = data.unas.map((s, i) => `
-                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
-                    <input type="text" value="${s.nombre}" onchange="cambiarServicio('unas', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-pink-500">
-                    <input type="number" value="${s.precio}" onchange="cambiarServicio('unas', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-pink-500 font-bold outline-none focus:border-pink-500">
-                    <button onclick="eliminarServicio('unas', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
-                </div>
-            `).join('');
+            const renderEquipo = (id, lista, cat, color) => {
+                document.getElementById(id).innerHTML = (lista || []).map((p, i) => `
+                    <div class="bg-gray-700/30 p-3 rounded-2xl mb-3 flex items-center gap-3 border border-gray-600/50">
+                        <div class="relative group">
+                            <img src="${p.foto}" class="w-12 h-12 rounded-full object-cover border-2 border-${color}-500">
+                            <button id="btn-foto-${cat}-${i}" onclick="subirFotoEquipo('${cat}', ${i})" class="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs">📷</button>
+                        </div>
+                        <input type="text" value="${p.nombre}" onchange="cambiarEquipo('${cat}', ${i}, 'nombre', this.value)" class="bg-transparent border-b border-gray-600 text-sm outline-none focus:border-${color}-500 flex-1">
+                        <button onclick="eliminarMiembro('${cat}', ${i})" class="text-red-500 text-xs">✕</button>
+                    </div>
+                `).join('');
+            };
+            renderEquipo('equipo-barberia', data.equipo.barberia, 'barberia', 'yellow');
+            renderEquipo('equipo-unas', data.equipo.unas, 'unas', 'pink');
+            renderEquipo('equipo-cejas', data.equipo.cejas, 'cejas', 'purple');
 
-            // Renderizar Equipo Barbería
-            const htmlBarberos = data.equipo.barberia.map((p, i) => `
-                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
-                    <input type="text" value="${p.nombre}" onchange="cambiarEquipo('barberia', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded w-1/3 text-sm border border-gray-600 outline-none focus:border-yellow-500" placeholder="Nombre">
-                    <input type="text" value="${p.foto}" onchange="cambiarEquipo('barberia', ${i}, 'foto', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-xs border border-gray-600 outline-none focus:border-yellow-500 text-gray-400" placeholder="Ruta foto (ej: img/equipo/foto.jpg)">
-                    <button onclick="eliminarMiembro('barberia', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
-                </div>
-            `).join('');
-
-            // Renderizar Equipo Uñas
-            const htmlManicuristas = data.equipo.unas.map((p, i) => `
-                <div class="flex gap-2 mb-3 transition-all hover:scale-[1.01]">
-                    <input type="text" value="${p.nombre}" onchange="cambiarEquipo('unas', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded w-1/3 text-sm border border-gray-600 outline-none focus:border-pink-500" placeholder="Nombre">
-                    <input type="text" value="${p.foto}" onchange="cambiarEquipo('unas', ${i}, 'foto', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-xs border border-gray-600 outline-none focus:border-pink-500 text-gray-400" placeholder="Ruta foto (ej: img/equipo/foto.jpg)">
-                    <button onclick="eliminarMiembro('unas', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
-                </div>
-            `).join('');
-
-            if(document.getElementById('gestion-equipo-barberia')) document.getElementById('gestion-equipo-barberia').innerHTML = htmlBarberos;
-            if(document.getElementById('gestion-equipo-unas')) document.getElementById('gestion-equipo-unas').innerHTML = htmlManicuristas;
+            const renderDescansos = (id, lista, cat, color) => {
+                document.getElementById(id).innerHTML = (lista || []).map((p, i) => {
+                    const desc = p.descansos || [];
+                    return `
+                    <div class="mb-4 p-3 border border-gray-700 rounded-xl bg-gray-900/50">
+                        <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
+                            <span class="text-xs font-bold text-gray-200">👤 ${p.nombre}</span>
+                            <div class="flex gap-2">
+                                <input type="date" id="date-${cat}-${i}" class="bg-gray-800 text-[10px] p-1 rounded border border-gray-600">
+                                <button onclick="agregarDescanso('${cat}', ${i})" class="bg-${color}-600/20 text-${color}-500 text-[10px] px-2 py-1 rounded font-bold">+ DÍA</button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            ${desc.map((d, j) => `<span class="bg-gray-800 border border-gray-600 text-${color}-400 text-[9px] px-2 py-0.5 rounded flex items-center gap-1">${d.split('-').reverse().join('/')} <button onclick="eliminarDescanso('${cat}', ${i}, ${j})" class="text-red-500">×</button></span>`).join('')}
+                        </div>
+                    </div>`;
+                }).join('');
+            };
+            renderDescansos('desc-barberia', data.equipo.barberia, 'barberia', 'yellow');
+            renderDescansos('desc-unas', data.equipo.unas, 'unas', 'pink');
+            renderDescansos('desc-cejas', data.equipo.cejas, 'cejas', 'purple');
         }
 
-        // FUNCIONES PARA SERVICIOS
         window.cambiarServicio = async (cat, index, campo, valor) => {
-            try {
-                const docRef = doc(db, "configuracion", "negocio");
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                data[cat][index][campo] = campo === 'precio' ? parseInt(valor) || 0 : valor;
-                await setDoc(docRef, data);
-            } catch (e) { console.error("Error al cambiar:", e); }
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data[cat][index][campo] = campo === 'precio' ? parseInt(valor) || 0 : valor;
+            await setDoc(docRef, data);
         };
-
         window.agregarServicio = async (cat) => {
-            try {
-                const docRef = doc(db, "configuracion", "negocio");
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                if (!data[cat]) data[cat] = []; 
-                data[cat].push({ nombre: "Nuevo Servicio", precio: 0 });
-                await setDoc(docRef, data);
-            } catch (e) { console.error("Error al agregar:", e); }
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            if(!data[cat]) data[cat] = [];
+            data[cat].push({ nombre: "Nuevo", precio: 0 });
+            await setDoc(docRef, data);
         };
-
         window.eliminarServicio = async (cat, index) => {
-            if(!confirm("¿Estás seguro de eliminar este servicio?")) return;
-            try {
-                const docRef = doc(db, "configuracion", "negocio");
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                data[cat].splice(index, 1);
-                await setDoc(docRef, data);
-            } catch (e) { console.error("Error al eliminar:", e); }
+            if(!confirm("¿Eliminar?")) return;
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data[cat].splice(index, 1);
+            await setDoc(docRef, data);
         };
-
-        // FUNCIONES PARA EQUIPO
         window.cambiarEquipo = async (cat, index, campo, valor) => {
-            try {
-                const docRef = doc(db, "configuracion", "negocio");
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                data.equipo[cat][index][campo] = valor;
-                await setDoc(docRef, data);
-            } catch (e) { console.error("Error al cambiar equipo:", e); }
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data.equipo[cat][index][campo] = valor;
+            await setDoc(docRef, data);
         };
-
         window.agregarMiembro = async (cat) => {
-            try {
-                const docRef = doc(db, "configuracion", "negocio");
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                if (!data.equipo) data.equipo = { barberia: [], unas: [] };
-                if (!data.equipo[cat]) data.equipo[cat] = [];
-                data.equipo[cat].push({ nombre: "Nuevo", foto: "img/equipo/default.jpg" });
-                await setDoc(docRef, data);
-            } catch (e) { console.error("Error al agregar miembro:", e); }
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data.equipo[cat].push({ nombre: "Nuevo", foto: "https://ui-avatars.com/api/?name=Nuevo&background=random" });
+            await setDoc(docRef, data);
         };
-
         window.eliminarMiembro = async (cat, index) => {
-            if(!confirm("¿Estás seguro de eliminar a este colaborador?")) return;
-            try {
-                const docRef = doc(db, "configuracion", "negocio");
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                data.equipo[cat].splice(index, 1);
+            if(!confirm("¿Eliminar?")) return;
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data.equipo[cat].splice(index, 1);
+            await setDoc(docRef, data);
+        };
+        window.agregarDescanso = async (cat, index) => {
+            const dateVal = document.getElementById(`date-${cat}-${index}`).value;
+            if(!dateVal) return;
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            if(!data.equipo[cat][index].descansos) data.equipo[cat][index].descansos = [];
+            if(!data.equipo[cat][index].descansos.includes(dateVal)) {
+                data.equipo[cat][index].descansos.push(dateVal);
+                data.equipo[cat][index].descansos.sort();
                 await setDoc(docRef, data);
-            } catch (e) { console.error("Error al eliminar miembro:", e); }
+            }
+        };
+        window.eliminarDescanso = async (cat, indexProf, indexDesc) => {
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            data.equipo[cat][indexProf].descansos.splice(indexDesc, 1);
+            await setDoc(docRef, data);
         };
 
         let chart;
@@ -197,137 +290,126 @@
             chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Barbería', 'Uñas'],
+                    labels: ['Barbería', 'Uñas', 'Miradas'],
                     datasets: [{
-                        data: [stats.barberia, stats.unas],
-                        backgroundColor: ['#eab308', '#ec4899'],
-                        borderColor: '#1f2937',
-                        borderWidth: 5
+                        data: [stats.barberia, stats.unas, stats.cejas],
+                        backgroundColor: ['#eab308', '#ec4899', '#a855f7'],
+                        borderColor: '#111827',
+                        borderWidth: 4
                     }]
                 },
-                options: { plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af' } } } }
+                options: { plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 10 } } } } }
             });
         }
     </script>
-
-    <style>
-        body { background-color: #111827; }
-        .glass { background: rgba(31, 41, 55, 0.7); backdrop-filter: blur(10px); }
-    </style>
 </head>
-<body class="text-gray-100 font-sans min-h-screen">
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
 
+    <!-- SECCIÓN LOGIN -->
     <div id="login-section" class="flex items-center justify-center min-h-screen p-4">
-        <div class="glass p-8 rounded-2xl border border-yellow-600/30 w-full max-w-md shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="inline-block p-4 rounded-full bg-yellow-600/10 mb-4 border border-yellow-600/20">
-                    <span class="text-4xl">💈</span>
-                </div>
-                <h1 class="text-2xl font-bold text-yellow-500 tracking-tight">ADMIN AMSTERDAM</h1>
-                <p class="text-gray-400 text-sm mt-1">Ingresa para gestionar tu negocio</p>
-            </div>
-            <div class="space-y-4">
-                <input type="email" id="email" placeholder="Correo electrónico" class="w-full p-4 bg-gray-800 rounded-xl border border-gray-700 outline-none focus:border-yellow-500 transition-colors">
-                <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 bg-gray-800 rounded-xl border border-gray-700 outline-none focus:border-yellow-500 transition-colors">
-                <button id="btn-login" onclick="login()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-4 rounded-xl font-bold text-gray-900 transition-all transform active:scale-95 shadow-lg shadow-yellow-600/20">
-                    Entrar al Panel
-                </button>
-            </div>
+        <div class="bg-gray-800 p-8 rounded-3xl border border-yellow-600/20 w-full max-w-md text-center shadow-2xl">
+            <h1 class="text-2xl font-bold text-yellow-500 mb-8 tracking-tighter">AMSTERDAM ADMIN</h1>
+            <input type="email" id="email" placeholder="Correo" class="w-full p-4 bg-gray-900 rounded-xl mb-4 outline-none border border-transparent focus:border-yellow-500">
+            <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 bg-gray-900 rounded-xl mb-6 outline-none border border-transparent focus:border-yellow-500">
+            <button onclick="login()" class="w-full bg-yellow-600 py-4 rounded-xl font-bold text-gray-900 hover:bg-yellow-500 transition-colors">Entrar al Panel</button>
         </div>
     </div>
 
-    <div id="admin-section" class="hidden pb-20">
-        <header class="glass sticky top-0 z-50 border-b border-gray-800 p-4 mb-8">
-            <div class="max-w-7xl mx-auto flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl">⚡</span>
-                    <h1 class="text-xl font-bold hidden md:block">Amsterdam <span class="text-yellow-500">Dashboard</span></h1>
-                </div>
-                <button onclick="logout()" class="bg-gray-800 hover:bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm font-medium border border-red-900/20 transition-all">
-                    Cerrar Sesión
-                </button>
+    <!-- LAYOUT ADMINISTRATIVO -->
+    <div id="admin-layout" class="hidden flex flex-col min-h-screen">
+        <header class="bg-gray-800/80 backdrop-blur-md border-b border-gray-700 p-4 sticky top-0 z-40 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMenu(true)" class="text-2xl p-2 hover:bg-gray-700 rounded-lg">☰</button>
+                <h1 class="font-bold text-lg tracking-tight">Amsterdam <span class="text-yellow-500">Club</span></h1>
             </div>
+            <button onclick="logout()" class="text-[10px] font-bold text-red-500 border border-red-500/20 px-3 py-1 rounded-full hover:bg-red-500 hover:text-white transition-all">SALIR</button>
         </header>
 
-        <main class="max-w-7xl mx-auto px-4 pb-12">
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                <div class="lg:col-span-2 space-y-8">
-                    <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-xl font-bold flex items-center gap-2">
-                                <span class="text-yellow-500">💈</span> Servicios de Barbería
-                            </h2>
-                            <button onclick="agregarServicio('barberia')" class="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all active:scale-95">
-                                + AGREGAR
-                            </button>
-                        </div>
+        <div id="side-menu" class="fixed inset-y-0 left-0 w-64 bg-gray-800 z-50 transform -translate-x-full transition-transform duration-300 border-r border-gray-700 shadow-2xl">
+            <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                <span class="font-bold text-yellow-500 tracking-widest text-xs">NAVEGACIÓN</span>
+                <button onclick="toggleMenu(false)" class="text-xl">✕</button>
+            </div>
+            <nav class="p-4 space-y-2">
+                <button onclick="showSection('sec-servicios')" class="w-full text-left p-4 hover:bg-yellow-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>📊</span> Servicios y Precios</button>
+                <button onclick="showSection('sec-equipo')" class="w-full text-left p-4 hover:bg-blue-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>👥</span> Gestión de Equipo</button>
+                <button onclick="showSection('sec-multimedia')" class="w-full text-left p-4 hover:bg-indigo-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>🎬</span> Multimedia (Video)</button>
+                <button onclick="showSection('sec-descansos')" class="w-full text-left p-4 hover:bg-green-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>📅</span> Calendario Libres</button>
+            </nav>
+        </div>
+
+        <main class="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-20">
+            <div id="sec-servicios" class="admin-page space-y-6">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h2 class="text-2xl font-bold">Servicios</h2>
+                        <p class="text-gray-500 text-xs">Administra los precios de tu negocio.</p>
+                    </div>
+                    <div class="w-32 h-32">
+                        <canvas id="ventasChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-gray-800 p-6 rounded-3xl border border-gray-700">
+                        <div class="flex justify-between mb-4"><h3 class="text-yellow-500 font-bold">💈 Barbería</h3> <button onclick="agregarServicio('barberia')" class="text-[10px] bg-yellow-600/20 px-2 py-1 rounded-lg">+ AGREGAR</button></div>
                         <div id="lista-barberia"></div>
                     </div>
-
-                    <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-xl font-bold flex items-center gap-2">
-                                <span class="text-pink-500">💅</span> Servicios de Uñas
-                            </h2>
-                            <button onclick="agregarServicio('unas')" class="bg-pink-600/10 text-pink-500 px-4 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all active:scale-95">
-                                + AGREGAR
-                            </button>
-                        </div>
+                    <div class="bg-gray-800 p-6 rounded-3xl border border-gray-700">
+                        <div class="flex justify-between mb-4"><h3 class="text-pink-500 font-bold">💅 Uñas</h3> <button onclick="agregarServicio('unas')" class="text-[10px] bg-pink-600/20 px-2 py-1 rounded-lg">+ AGREGAR</button></div>
                         <div id="lista-unas"></div>
                     </div>
-                </div>
-
-                <div class="space-y-8">
-                    <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl text-center">
-                        <h2 class="text-lg font-bold mb-6 text-gray-400">Balance de Citas</h2>
-                        <div class="max-w-[200px] mx-auto mb-6">
-                            <canvas id="ventasChart"></canvas>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="p-4 bg-gray-800/50 rounded-2xl">
-                                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Barbería</p>
-                                <span class="text-xl font-bold text-yellow-500">Sincronizado</span>
-                            </div>
-                            <div class="p-4 bg-gray-800/50 rounded-2xl">
-                                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Uñas</p>
-                                <span class="text-xl font-bold text-pink-500">Sincronizado</span>
-                            </div>
-                        </div>
+                    <div class="bg-gray-800 p-6 rounded-3xl border border-gray-700">
+                        <div class="flex justify-between mb-4"><h3 class="text-purple-500 font-bold">✨ Cejas</h3> <button onclick="agregarServicio('cejas')" class="text-[10px] bg-purple-600/20 px-2 py-1 rounded-lg">+ AGREGAR</button></div>
+                        <div id="lista-cejas"></div>
+                    </div>
+                    <div class="bg-gray-800 p-6 rounded-3xl border border-gray-700">
+                        <div class="flex justify-between mb-4"><h3 class="text-indigo-500 font-bold">👁️ Pestañas</h3> <button onclick="agregarServicio('pestanas')" class="text-[10px] bg-indigo-600/20 px-2 py-1 rounded-lg">+ AGREGAR</button></div>
+                        <div id="lista-pestanas"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="glass p-6 rounded-3xl border border-gray-800 shadow-xl">
-                <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-blue-400">
-                    <span>👥</span> Gestión de Equipo Activo
-                </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="bg-gray-900/50 p-6 rounded-2xl border border-yellow-600/30">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="font-bold text-yellow-500 text-lg">Barberos</h3>
-                            <button onclick="agregarMiembro('barberia')" class="bg-yellow-600/10 text-yellow-500 px-3 py-1 rounded-full text-xs font-bold border border-yellow-600/20 hover:bg-yellow-600 hover:text-gray-900 transition-all active:scale-95">
-                                + NUEVO
-                            </button>
-                        </div>
-                        <div id="gestion-equipo-barberia"></div>
+            <div id="sec-equipo" class="admin-page hidden space-y-6">
+                <h2 class="text-2xl font-bold">Gestión de Equipo</h2>
+                <p class="text-gray-500 text-xs mb-6">Toca el icono de la cámara en la foto de cada miembro para actualizarla (se comprime automáticamente).</p>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-gray-800 p-5 rounded-3xl border border-yellow-600/10">
+                        <div class="flex justify-between mb-4"><span class="text-yellow-500 font-bold text-sm">Barberos</span> <button onclick="agregarMiembro('barberia')" class="text-[10px] bg-yellow-600/20 px-2 py-1 rounded-lg">+</button></div>
+                        <div id="equipo-barberia"></div>
                     </div>
-
-                    <div class="bg-gray-900/50 p-6 rounded-2xl border border-pink-600/30">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="font-bold text-pink-500 text-lg">Manicuristas</h3>
-                            <button onclick="agregarMiembro('unas')" class="bg-pink-600/10 text-pink-500 px-3 py-1 rounded-full text-xs font-bold border border-pink-600/20 hover:bg-pink-600 hover:text-white transition-all active:scale-95">
-                                + NUEVA
-                            </button>
-                        </div>
-                        <div id="gestion-equipo-unas"></div>
+                    <div class="bg-gray-800 p-5 rounded-3xl border border-pink-600/10">
+                        <div class="flex justify-between mb-4"><span class="text-pink-500 font-bold text-sm">Manicuristas</span> <button onclick="agregarMiembro('unas')" class="text-[10px] bg-pink-600/20 px-2 py-1 rounded-lg">+</button></div>
+                        <div id="equipo-unas"></div>
+                    </div>
+                    <div class="bg-gray-800 p-5 rounded-3xl border border-purple-600/10">
+                        <div class="flex justify-between mb-4"><span class="text-purple-500 font-bold text-sm">Miradas</span> <button onclick="agregarMiembro('cejas')" class="text-[10px] bg-purple-600/20 px-2 py-1 rounded-lg">+</button></div>
+                        <div id="equipo-cejas"></div>
                     </div>
                 </div>
             </div>
 
+            <!-- SECCIÓN MULTIMEDIA ACTUALIZADA -->
+            <div id="sec-multimedia" class="admin-page hidden space-y-6">
+                <h2 class="text-2xl font-bold">Multimedia</h2>
+                <div class="bg-gray-800 p-8 rounded-3xl border border-blue-500/20">
+                    <h3 class="text-blue-400 font-bold mb-4 flex items-center gap-2">🎬 Video Promocional (Firebase)</h3>
+                    <p class="text-xs text-gray-400 mb-6">Sube tu video optimizado (Máximo 40MB recomendado). Se reproducirá automáticamente en el inicio de la web, sin anuncios ni bloqueos de copyright.</p>
+                    <button id="btn-subir-video" onclick="subirVideoArchivo()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold text-sm hover:bg-blue-500 transition-colors flex items-center justify-center gap-2">
+                        <span>📤</span> Seleccionar y Subir Video MP4
+                    </button>
+                </div>
+            </div>
+
+            <div id="sec-descansos" class="admin-page hidden space-y-6">
+                <h2 class="text-2xl font-bold">Días de Descanso</h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div><h3 class="text-yellow-500 font-bold mb-4 text-xs">Barbería</h3><div id="desc-barberia"></div></div>
+                    <div><h3 class="text-pink-500 font-bold mb-4 text-xs">Uñas</h3><div id="desc-unas"></div></div>
+                    <div><h3 class="text-purple-500 font-bold mb-4 text-xs">Miradas</h3><div id="desc-cejas"></div></div>
+                </div>
+            </div>
         </main>
     </div>
-
 </body>
 </html>
