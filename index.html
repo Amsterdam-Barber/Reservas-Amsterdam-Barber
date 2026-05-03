@@ -12,14 +12,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <title>💈 Amsterdam Barber Club - ¡Reserva tu Cita! 💈</title>
-    <meta name="description" content="Reserva tu cita en Amsterdam Barber Club. Expertos en Barbería, Manicura y Pedicura en Montenegro, Quindío.">
-    <meta property="og:title" content="💈 Amsterdam Barber Club | Reservas">
-    <meta property="og:description" content="Agenda tu cita fácil y rápido. Cortes, barba, manicura, pedicura, cejas y pestañas con los mejores profesionales.">
+    <!-- TÍTULO OPTIMIZADO PARA GOOGLE -->
+    <title>💈 Barbería, Uñas y Cejas en Montenegro Quindío | Amsterdam Barber Club</title>
+    
+    <!-- DESCRIPCIÓN CON TODAS TUS PALABRAS CLAVE -->
+    <meta name="description" content="¿Buscas barbería, manicura, pedicura o arreglo de cejas y pestañas en Montenegro, Quindío? Agenda fácil en Amsterdam Barber Club. Expertos cerca a la galería.">
+    <meta name="keywords" content="barberia en montenegro quindio, manicura y pedicura en montenegro, manicure y pedicure en montenegro quindio, arreglo de uñas en montenegro, arreglo de cejas en montenegro, cejas y pestañas, peluqueria montenegro">
+    
+    <meta property="og:title" content="💈 Amsterdam Barber Club | Barbería y Estética en Montenegro">
+    <meta property="og:description" content="Agenda tu cita fácil y rápido para barbería, uñas y miradas. Los mejores profesionales de Montenegro enseguida del Chavo.">
     <link rel="icon" type="image/jpeg" href="img/logo.jpg">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <!-- EL CÓDIGO INVISIBLE QUE ENAMORA A GOOGLE -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BeautySalon",
+      "name": "Amsterdam Barber Club",
+      "image": "https://amsterdam-barber-club.web.app/img/logo.jpg",
+      "@id": "https://amsterdam-barber-club.web.app",
+      "url": "https://amsterdam-barber-club.web.app",
+      "telephone": "+573145586557",
+      "priceRange": "$$",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Calle 20 7-14 Local 2",
+        "addressLocality": "Montenegro",
+        "addressRegion": "Quindío",
+        "addressCountry": "CO"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 4.5667, 
+        "longitude": -75.7500
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Servicios de Belleza y Barbería",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": { "@type": "Service", "name": "Corte de cabello y Barbería" }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": { "@type": "Service", "name": "Manicura y pedicura (Semipermanente, Acrílicas, Polygel)" }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": { "@type": "Service", "name": "Arreglo y diseño de cejas" }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": { "@type": "Service", "name": "Lifting y extensiones de pestañas" }
+          }
+        ]
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          "opens": "10:00",
+          "closes": "20:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Saturday", "Sunday"],
+          "opens": "09:30",
+          "closes": "20:00"
+        }
+      ]
+    }
+    </script>
 
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -516,7 +583,15 @@
         </div>  
     </div>
 
+    <!-- PIE DE PÁGINA OPTIMIZADO PARA GOOGLE -->
     <footer class="bg-gray-950 border-t border-gray-800 py-12 mt-12 pb-32 text-center">
+        <div class="max-w-3xl mx-auto px-4 mb-8">
+            <h2 class="text-gray-400 font-bold mb-2">Amsterdam Barber Club - Tu mejor opción en Montenegro, Quindío</h2>
+            <p class="text-xs text-gray-500 leading-relaxed">
+                Somos expertos en potenciar tu estilo. Ofrecemos el mejor servicio de <strong>barbería en Montenegro</strong>, además de especializarnos en <strong>manicura y pedicura</strong> (uñas acrílicas, polygel, semipermanente). Resalta tu mirada con nuestro <strong>arreglo de cejas y pestañas</strong>. Visítanos en el centro de Montenegro, zona galería.
+            </p>
+        </div>
+
         <div class="mb-8">
             <a href="admin.html" class="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-gray-600 hover:text-yellow-500 transition-colors border border-gray-800 hover:border-yellow-600/30 px-4 py-2 rounded-full">
                 <span>⚙️</span> Acceso Administrativo
