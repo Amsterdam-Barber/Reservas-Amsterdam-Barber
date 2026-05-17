@@ -12,10 +12,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- TÍTULO OPTIMIZADO PARA GOOGLE -->
     <title>💈 Barbería, Uñas y Cejas en Montenegro Quindío | Amsterdam Barber Club</title>
     
-    <!-- DESCRIPCIÓN CON TODAS TUS PALABRAS CLAVE -->
     <meta name="description" content="¿Buscas barbería, manicura, pedicura o arreglo de cejas y pestañas en Montenegro, Quindío? Agenda fácil en Amsterdam Barber Club. Expertos cerca a la galería.">
     <meta name="keywords" content="barberia en montenegro quindio, manicura y pedicura en montenegro, manicure y pedicure en montenegro quindio, arreglo de uñas en montenegro, arreglo de cejas en montenegro, cejas y pestañas, peluqueria montenegro">
     
@@ -26,7 +24,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
-    <!-- EL CÓDIGO INVISIBLE QUE ENAMORA A GOOGLE -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -90,7 +87,8 @@
 
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // Modificado por IA: Cambiamos addDoc por setDoc
+    import { getFirestore, doc, onSnapshot, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
@@ -104,6 +102,11 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore();
+
+    // Modificado por IA: Usar setDoc para que el ID del documento sea el código secreto
+    window.guardarCitaInFirestore = async (datos, idSecreto) => {
+        return await setDoc(doc(db, "reservas", idSecreto), datos);
+    };
 
     window.addEventListener('load', () => {
         generarFechas();
@@ -135,7 +138,6 @@
                                         Tu navegador no soporta video.
                                     </video>
                                     
-                                    <!-- CAPA: OPRIME PARA ESCUCHAR -->
                                     <div id="unmute-overlay" class="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer transition-all duration-500 z-10 hover:bg-black/30">
                                         <div class="bg-gray-900/80 px-6 py-3 rounded-full border border-yellow-500/50 flex items-center gap-3 animate-pulse shadow-[0_0_20px_rgba(234,179,8,0.3)] backdrop-blur-sm">
                                             <span class="text-2xl">🔊</span>
@@ -154,7 +156,6 @@
                             const overlay = document.getElementById('unmute-overlay');
                             
                             if (video) {
-                                // Observer que revisa si el video está en pantalla
                                 const observer = new IntersectionObserver((entries) => {
                                     entries.forEach(entry => {
                                         if (entry.isIntersecting) {
@@ -163,11 +164,10 @@
                                             video.pause();
                                         }
                                     });
-                                }, { threshold: 0.4 }); // 0.4 = 40% visible
+                                }, { threshold: 0.4 });
 
                                 observer.observe(video);
 
-                                // Lógica al tocar "Oprime para escuchar"
                                 if (overlay) {
                                     overlay.addEventListener('click', (e) => {
                                         e.stopPropagation(); 
@@ -195,7 +195,6 @@
                     const contenedor = document.getElementById(`carrusel-${cat}`);
                     if(!contenedor) return;
 
-                    // Filtramos solo las que están marcadas como "activas" en el admin
                     const fotosActivas = (lista || []).filter(f => f.activa !== false);
 
                     if(fotosActivas.length === 0) {
@@ -210,7 +209,6 @@
                     `).join('');
                 };
 
-                // Llamamos a la función para cada sección
                 renderizarGaleria('barberia', data.galeria?.barberia, 'yellow-600');
                 renderizarGaleria('unas', data.galeria?.unas, 'pink-600');
                 renderizarGaleria('cejas', data.galeria?.cejas, 'purple-600');
@@ -226,7 +224,6 @@
                             <img src="${p.foto}" onerror="this.src='${avatarUrl}'" 
                                  class="w-full h-full rounded-full border-4 border-gray-600 peer-checked:border-${colorName}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
                             
-                            <!-- BOTÓN DE AMPLIAR FOTO -->
                             <button type="button" onclick="abrirFotoUnica(this.previousElementSibling.src, event)" class="absolute -top-1 -right-1 bg-gray-800 border border-gray-500 rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-gray-700 hover:scale-110 transition-transform text-[10px] z-10" title="Ver foto">
                                 🔍
                             </button>
@@ -284,16 +281,16 @@
         ul.classList.toggle('hidden');
     };
 
-    window.seleccionarServicio = function(tipo, nombre, precio, textColor) {
+    window.seleccionarServicio = function(tipo, fontName, precio, textColor) {
         const inputId = tipo === 'barberia' ? 'servB' : (tipo === 'unas' ? 'servU' : (tipo === 'cejas' ? 'servCj' : 'servPs'));
         const displayId = tipo === 'barberia' ? 'selected-service-barberia' : (tipo === 'unas' ? 'selected-service-unas' : (tipo === 'cejas' ? 'selected-service-cejas' : 'selected-service-pestanas'));
         
-        document.getElementById(inputId).value = nombre === 'Ninguno' ? 'Ninguno' : `${nombre} - $${precio.toLocaleString('es-CO')}`;
+        document.getElementById(inputId).value = fontName === 'Ninguno' ? 'Ninguno' : `${fontName} - $${precio.toLocaleString('es-CO')}`;
         
-        if(nombre === 'Ninguno') {
+        if(fontName === 'Ninguno') {
             document.getElementById(displayId).innerHTML = `<span class="text-gray-500 italic">Ninguno seleccionado</span>`;
         } else {
-            document.getElementById(displayId).innerHTML = `<span class="text-white">${nombre}</span> <span class="${textColor} font-bold ml-2"> $${precio.toLocaleString('es-CO')}</span>`;
+            document.getElementById(displayId).innerHTML = `<span class="text-white">${fontName}</span> <span class="${textColor} font-bold ml-2"> $${precio.toLocaleString('es-CO')}</span>`;
         }
         
         document.getElementById(`list-services-${tipo}`).classList.add('hidden');
@@ -378,8 +375,7 @@
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-barberia', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
                 <div id="carrusel-barberia" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <!-- Galería dinámica gestionada desde Firebase -->
-                </div>
+                    </div>
                 <button onclick="moverCarrusel('carrusel-barberia', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-yellow-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
@@ -444,8 +440,7 @@
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-unas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
                 <div id="carrusel-unas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <!-- Galería dinámica gestionada desde Firebase -->
-                </div>
+                    </div>
                 <button onclick="moverCarrusel('carrusel-unas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-pink-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
@@ -510,8 +505,7 @@
             <section class="relative max-w-5xl mx-auto px-10 md:px-12 mb-12">
                 <button onclick="moverCarrusel('carrusel-cejas', -1)" class="absolute left-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-purple-500 hover:scale-125 transition-transform z-10 select-none">❮</button>
                 <div id="carrusel-cejas" class="flex gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth py-2">
-                    <!-- Galería dinámica gestionada desde Firebase -->
-                </div>
+                    </div>
                 <button onclick="moverCarrusel('carrusel-cejas', 1)" class="absolute right-0 top-1/2 -translate-y-1/2 text-4xl md:text-5xl text-purple-500 hover:scale-125 transition-transform z-10 select-none">❯</button>
             </section>
 
@@ -583,7 +577,6 @@
         </div>  
     </div>
 
-    <!-- PIE DE PÁGINA OPTIMIZADO PARA GOOGLE -->
     <footer class="bg-gray-950 border-t border-gray-800 py-12 mt-12 pb-32 text-center">
         <div class="max-w-3xl mx-auto px-4 mb-8">
             <h2 class="text-gray-400 font-bold mb-2">Amsterdam Barber Club - Tu mejor opción en Montenegro, Quindío</h2>
@@ -805,13 +798,19 @@
             let fechaID = tipo === 'barberia' ? 'fechaB' : (tipo === 'unas' ? 'fechaU' : 'fechaC');
             let horaID = tipo === 'barberia' ? 'horaB' : (tipo === 'unas' ? 'horaU' : 'horaC');
 
+            // Generador del ID único de 6 caracteres
+            const codigoCita = Math.random().toString(36).substring(2, 8).toUpperCase();
+
             let datos = {
+                idCita: codigoCita,
                 nombre: document.getElementById(nomID).value,
                 celular: document.getElementById(telID).value,
                 servicio: "", 
                 profesional: document.querySelector(`input[name="${profName}"]:checked`)?.value,
                 fecha: document.getElementById(fechaID).value,
-                hora: document.getElementById(horaID).value
+                hora: document.getElementById(horaID).value,
+                estado: "confirmada",
+                timestamp: new Date().toISOString()
             };
 
             if (tipo === 'cejas') {
@@ -837,6 +836,12 @@
             btn.disabled = true;
 
             try {
+                // 1. Almacenar en la base de datos Firestore de Firebase
+                if (window.guardarCitaInFirestore) {
+                    await window.guardarCitaInFirestore(datos, codigoCita); // Modificado por IA
+                }
+
+                // 2. Enviar datos al sistema de Google Sheets actual
                 await fetch(WEB_APP_URL, {
                     method: 'POST', mode: 'no-cors',
                     body: JSON.stringify(datos), headers: { 'Content-Type': 'application/json' }
@@ -850,7 +855,12 @@
                 confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
 
                 setTimeout(() => {
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A%0A_(Quedo atento a la confirmación)_`;
+                    // Enlace dinámico directo para reprogramar de forma autónoma
+                    const linkReprogramar = `https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/reprogramar.html?id=${codigoCita}`;
+                    
+                    // Modificado por IA: Usamos %0A para los saltos de línea y quitamos encodeURIComponent para proteger los emojis
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A(Quedo atento a la confirmación de disponibilidad)%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
+                    
                     window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
                     setTimeout(() => {
@@ -864,6 +874,7 @@
                 }, 2500);
 
             } catch (error) {
+                console.error("Error al procesar la cita:", error);
                 alert("Error al guardar la cita.");
                 txtBtn.innerText = textoOriginal;
                 spinner.classList.add('hidden');
@@ -875,13 +886,11 @@
         let currentIndex = 0;
         let imagesList = [];
 
-        // NUEVA FUNCIÓN PARA VER LA FOTO DEL PROFESIONAL
         window.abrirFotoUnica = function(src, event) {
             if(event) { event.preventDefault(); event.stopPropagation(); }
             const lightbox = document.getElementById('lightbox');
             document.getElementById('lb-imagen').src = src;
             
-            // Ocultamos las flechas porque es solo una foto
             document.getElementById('lb-prev').classList.add('hidden');
             document.getElementById('lb-next').classList.add('hidden');
             
@@ -898,7 +907,6 @@
             const lightbox = document.getElementById('lightbox');
             document.getElementById('lb-imagen').src = imagesList[currentIndex];
             
-            // Asegurarnos de que las flechas estén visibles para la galería
             document.getElementById('lb-prev').classList.remove('hidden');
             document.getElementById('lb-next').classList.remove('hidden');
             
