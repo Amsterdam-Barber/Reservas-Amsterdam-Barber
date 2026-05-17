@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es" class="overflow-x-hidden bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reprogramar Cita | Amsterdam Barber Club</title>
+    <link rel="icon" type="image/jpeg" href="img/logo.jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(31, 41, 55, 1); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(75, 85, 99, 1); border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans relative w-full min-h-screen flex flex-col items-center">
+
+    <header class="text-center py-8 bg-gray-800 border-b border-yellow-600 shadow-xl w-full flex flex-col items-center">
+        <div class="w-40 md:w-48 mb-4 rounded-xl border-2 border-yellow-500 overflow-hidden shadow-lg cursor-pointer" onclick="window.location.href='index.html'">
+            <img src="img/logo.jpg" alt="Logo Amsterdam Barber Club" class="w-full h-auto block" onerror="this.style.display='none';">
+        </div>
+        <h1 class="text-2xl font-bold text-yellow-500 tracking-widest uppercase">Reprogramación</h1>
+    </header>
+
+    <main class="max-w-md w-full mx-auto px-4 py-8 flex-grow">
+        
+        <div id="ui-loading" class="flex flex-col items-center justify-center py-12">
+            <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="text-gray-400 animate-pulse font-medium">Buscando tu cita...</p>
+        </div>
+
+        <div id="ui-error" class="hidden flex-col items-center justify-center py-12 text-center">
+            <span class="text-6xl mb-4">🕵️‍♂️</span>
+            <h2 class="text-2xl font-bold text-red-500 mb-2">Cita no encontrada</h2>
+            <p class="text-gray-400 mb-6 text-sm" id="error-msg">El enlace parece estar roto o la cita ya no existe.</p>
+            <a href="index.html" class="bg-gray-800 border border-yellow-600 text-yellow-500 hover:bg-yellow-600 hover:text-white px-6 py-3 rounded-lg font-bold transition-colors">
+                Volver al inicio
+            </a>
+        </div>
+
+        <div id="ui-form" class="hidden bg-gray-800 p-6 rounded-xl border border-yellow-600 shadow-2xl">
+            
+            <div class="bg-gray-900 border border-gray-700 p-4 rounded-lg mb-6 shadow-inner">
+                <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-2">Cita Actual</p>
+                <p class="text-lg font-bold text-white mb-1">Hola, <span id="res-nombre" class="text-yellow-500"></span></p>
+                <p class="text-sm text-gray-300">Servicio: <span id="res-servicio" class="font-semibold text-white"></span></p>
+                <p class="text-sm text-gray-300">Con: <span id="res-profesional" class="font-semibold text-white"></span></p>
+                <p class="text-sm text-red-400 mt-2 font-bold flex items-center gap-1">
+                    <span>📅</span> Fecha actual: <span id="res-fecha-hora"></span>
+                </p>
+            </div>
+
+            <form id="formReprogramar" class="space-y-6" onsubmit="window.enviarReprogramacion(event)">
+                
+                <div class="pt-2 border-t border-gray-700 relative">
+                    <label class="block text-sm text-gray-400 mb-3 text-center">Selecciona Nueva Fecha</label>
+                    <div class="flex gap-3 overflow-x-auto hide-scrollbar snap-x pb-2" id="date-container"></div>
+                    <input type="text" id="nuevaFecha" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                </div>
+
+                <div class="pt-2 border-t border-gray-700 relative">
+                    <label class="block text-sm text-gray-400 mb-3 text-center">Selecciona Nueva Hora</label>
+                    <div id="hours-container" class="grid grid-cols-1">
+                        <p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg">Por favor, elige un día arriba para ver las horas disponibles.</p>
+                    </div>
+                    <input type="text" id="nuevaHora" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                </div>
+
+                <button type="submit" id="btn-submit" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-lg mt-4 transition duration-300 shadow-lg flex justify-center items-center gap-2">
+                    <span class="btn-text">Confirmar Cambio</span>
+                    <svg class="animate-spin h-5 w-5 text-gray-900 hidden loader-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Misma configuración de index.html
+        const firebaseConfig = {
+            apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
+            authDomain: "amsterdam-barber-club.firebaseapp.com",
+            projectId: "amsterdam-barber-club",
+            storageBucket: "amsterdam-barber-club.firebasestorage.app",
+            messagingSenderId: "520214344037",
+            appId: "1:520214344037:web:3c8e6ea2bfa10bac91b18c",
+            measurementId: "G-HHX3QVXEQJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore();
+        const TELEFONO = "573133454273";
+
+        // Variables globales para el estado de la aplicación
+        window.citaActual = null;
+        window.docIdFirestore = null;
+        window.descansosProf = [];
+
+        window.addEventListener('load', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const idCita = urlParams.get('id');
+
+            if (!idCita) {
+                mostrarError("Falta el ID de la cita en el enlace.");
+                return;
+            }
+
+            await cargarCita(idCita);
+        });
+
+        async function cargarCita(id) {
+            try {
+                // 1. Buscar la cita en Firestore
+                const q = query(collection(db, "reservas"), where("idCita", "==", id));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    mostrarError("No pudimos encontrar tu cita. Verifica el enlace o contacta soporte.");
+                    return;
+                }
+
+                // Guardar la data
+                const docSnap = querySnapshot.docs[0];
+                window.docIdFirestore = docSnap.id; 
+                window.citaActual = docSnap.data();
+
+                // Pintar los datos en el resumen
+                document.getElementById('res-nombre').innerText = window.citaActual.nombre;
+                document.getElementById('res-servicio').innerText = window.citaActual.servicio;
+                document.getElementById('res-profesional').innerText = window.citaActual.profesional;
+                document.getElementById('res-fecha-hora').innerText = `${window.citaActual.fecha} a las ${window.citaActual.hora}`;
+
+                // 2. Buscar descansos de ese profesional específico
+                const confSnap = await getDoc(doc(db, "configuracion", "negocio"));
+                if (confSnap.exists()) {
+                    const data = confSnap.data();
+                    const profs = [
+                        ...(data.equipo?.barberia || []), 
+                        ...(data.equipo?.unas || []), 
+                        ...(data.equipo?.cejas || [])
+                    ];
+                    
+                    const elProf = profs.find(p => p.nombre === window.citaActual.profesional);
+                    if (elProf && elProf.descansos) {
+                        window.descansosProf = elProf.descansos;
+                    }
+                }
+
+                // 3. Preparar la UI para reprogramar
+                generarFechas();
+                document.getElementById('ui-loading').classList.add('hidden');
+                document.getElementById('ui-form').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+                mostrarError("Hubo un error de conexión al cargar tu cita.");
+            }
+        }
+
+        function mostrarError(mensaje) {
+            document.getElementById('ui-loading').classList.add('hidden');
+            document.getElementById('ui-form').classList.add('hidden');
+            const errorDiv = document.getElementById('ui-error');
+            errorDiv.classList.remove('hidden');
+            errorDiv.classList.add('flex');
+            document.getElementById('error-msg').innerText = mensaje;
+        }
+
+        function generarFechas() {
+            const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            let htmlFechas = [];
+            for(let i = 0; i < 15; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() + i);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                let diaTexto = dias[d.getDay()];
+                if (i === 0) diaTexto = "Hoy";
+                else if (i === 1) diaTexto = "Mañana";
+                htmlFechas.push({ dateStr, diaTexto, diaNum: d.getDate(), mesTexto: meses[d.getMonth()], diaSemana: d.getDay() });
+            }
+
+            const container = document.getElementById(`date-container`);
+            container.innerHTML = htmlFechas.map(d => `
+                <label class="cursor-pointer flex-none snap-center group w-[72px]">
+                    <input type="radio" name="r-date" value="${d.dateStr}" data-dia-semana="${d.diaSemana}" class="peer sr-only" onchange="window.actualizarHoras('${d.dateStr}', ${d.diaSemana})">
+                    <div class="px-2 py-3 bg-gray-800 border border-gray-600 rounded-xl peer-checked:bg-yellow-600/20 peer-checked:border-yellow-500 text-center transition-all duration-300">
+                        <p class="text-[11px] text-gray-400 peer-checked:text-yellow-500 font-medium mb-1">${d.diaTexto}</p>
+                        <p class="text-xl font-bold text-gray-200 peer-checked:text-white">${d.diaNum}</p>
+                        <p class="text-[10px] text-gray-500 peer-checked:text-gray-300 uppercase mt-1">${d.mesTexto}</p>
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        window.actualizarHoras = function(fechaStr, diaSemana) {
+            document.getElementById('nuevaFecha').value = fechaStr; 
+            const container = document.getElementById(`hours-container`);
+            document.getElementById('nuevaHora').value = ""; 
+
+            // Verificar si el profesional está de descanso
+            if (window.descansosProf.includes(fechaStr)) {
+                container.innerHTML = `
+                    <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
+                        <span class="text-2xl block mb-2">🏖️</span>
+                        <p class="text-gray-200 font-bold text-sm">${window.citaActual.profesional} está de descanso</p>
+                        <p class="text-gray-400 text-xs mt-1">Elige otro día para reprogramar con este profesional.</p>
+                    </div>
+                `;
+                container.className = "grid grid-cols-1"; 
+                return;
+            }
+
+            const ahora = new Date();
+            const esHoy = (fechaStr === `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`);
+            const horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+            
+            let timeSlots = [];
+            let [h, m] = horaApertura.split(':').map(Number);
+            
+            while (h < 20 || (h === 20 && m === 0)) {
+                const hora24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const h12 = h % 12 || 12;
+                const hora12 = `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+                
+                let pasada = false;
+                if (esHoy) {
+                    const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+                    if (hora24 <= horaActual) pasada = true;
+                }
+
+                if (!pasada) timeSlots.push(hora12);
+                
+                m += 15;
+                if (m === 60) { h++; m = 0; }
+            }
+
+            if (timeSlots.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
+                        <span class="text-2xl block mb-1">🚫</span>
+                        <p class="text-gray-300 font-bold text-sm">Cerrado por hoy</p>
+                        <p class="text-gray-500 text-xs mt-1">Ya cerramos o no hay más citas disponibles.</p>
+                    </div>
+                `;
+                container.className = "grid grid-cols-1"; 
+            } else {
+                container.className = "grid grid-cols-3 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto pr-2 custom-scroll"; 
+                container.innerHTML = timeSlots.map(t => `
+                    <label class="cursor-pointer">
+                        <input type="radio" name="r-hour" value="${t}" class="peer sr-only" onchange="document.getElementById('nuevaHora').value = this.value">
+                        <div class="py-2 text-center border border-gray-600 bg-gray-700 rounded-lg peer-checked:bg-yellow-600 peer-checked:border-yellow-500 peer-checked:text-white text-gray-300 font-medium text-xs transition-all hover:border-yellow-500 shadow-sm">
+                            ${t}
+                        </div>
+                    </label>
+                `).join('');
+            }
+        }
+
+        window.enviarReprogramacion = async function(e) {
+            e.preventDefault();
+
+            const nuevaFecha = document.getElementById('nuevaFecha').value;
+            const nuevaHora = document.getElementById('nuevaHora').value;
+
+            if (!nuevaFecha || !nuevaHora) {
+                alert("Por favor, selecciona una fecha y una hora válidas.");
+                return;
+            }
+
+            let btn = document.getElementById('btn-submit');
+            let spinner = btn.querySelector('.loader-icon');
+            let txtBtn = btn.querySelector('.btn-text');
+            let textoOriginal = txtBtn.innerText;
+
+            txtBtn.innerText = "Actualizando...";
+            spinner.classList.remove('hidden');
+            btn.disabled = true;
+
+            try {
+                // Actualizar documento en Firebase
+                const docRef = doc(db, "reservas", window.docIdFirestore);
+                await updateDoc(docRef, {
+                    fecha: nuevaFecha,
+                    hora: nuevaHora,
+                    estado: "reprogramada",
+                    timestampActualizacion: new Date().toISOString()
+                });
+
+                txtBtn.innerText = "¡Cita Actualizada! 🎉";
+                spinner.classList.add('hidden');
+                btn.classList.remove('bg-yellow-600');
+                btn.classList.add('bg-green-500');
+
+                setTimeout(() => {
+                    // Generar mensaje de WhatsApp codificado
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈
+He reprogramado mi cita desde el enlace:
+
+👤 *Cliente:* ${window.citaActual.nombre}
+🆔 *ID Cita:* ${window.citaActual.idCita}
+✂️ *Servicio:* ${window.citaActual.servicio}
+🙌 *Con:* ${window.citaActual.profesional}
+
+❌ *Cita anterior:* ${window.citaActual.fecha} a las ${window.citaActual.hora}
+✅ *NUEVA CITA:* ${nuevaFecha} a las ${nuevaHora}
+
+(Quedo atento a la confirmación)`;
+
+                    window.location.href = `https://wa.me/${TELEFONO}?text=${encodeURIComponent(mensaje)}`;
+                    
+                    // Restaurar botón
+                    setTimeout(() => {
+                        txtBtn.innerText = textoOriginal;
+                        btn.disabled = false;
+                        btn.classList.remove('bg-green-500');
+                        btn.classList.add('bg-yellow-600');
+                    }, 2000);
+                }, 1500);
+
+            } catch (error) {
+                console.error("Error al actualizar:", error);
+                alert("Error al reprogramar. Intenta de nuevo.");
+                txtBtn.innerText = textoOriginal;
+                spinner.classList.add('hidden');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
