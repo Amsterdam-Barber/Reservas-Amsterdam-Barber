@@ -113,17 +113,16 @@
 
         async function cargarCita(id) {
             try {
-                // 1. Buscar la cita en Firestore
-                const q = query(collection(db, "reservas"), where("idCita", "==", id));
-                const querySnapshot = await getDocs(q);
+                // 1. Buscar la cita directa por su ID secreto (Sin hacer búsquedas generales)
+                const docRef = doc(db, "reservas", id);
+                const docSnap = await getDoc(docRef);
 
-                if (querySnapshot.empty) {
+                if (!docSnap.exists()) {
                     mostrarError("No pudimos encontrar tu cita. Verifica el enlace o contacta soporte.");
                     return;
                 }
 
                 // Guardar la data
-                const docSnap = querySnapshot.docs[0];
                 window.docIdFirestore = docSnap.id; 
                 window.citaActual = docSnap.data();
 
@@ -298,21 +297,11 @@
                 btn.classList.add('bg-green-500');
 
                 setTimeout(() => {
-                    // Generar mensaje de WhatsApp codificado
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈
-He reprogramado mi cita desde el enlace:
+                    // Modificado por IA: Usamos %0A para evitar que los emojis se rompan al reprogramar
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AHe reprogramado mi cita desde el enlace:%0A%0A👤 *Cliente:* ${window.citaActual.nombre}%0A🆔 *ID Cita:* ${window.citaActual.idCita}%0A✂️ *Servicio:* ${window.citaActual.servicio}%0A🙌 *Con:* ${window.citaActual.profesional}%0A%0A❌ *Cita anterior:* ${window.citaActual.fecha} a las ${window.citaActual.hora}%0A✅ *NUEVA CITA:* ${nuevaFecha} a las ${nuevaHora}%0A%0A(Quedo atento a la confirmación)`;
 
-👤 *Cliente:* ${window.citaActual.nombre}
-🆔 *ID Cita:* ${window.citaActual.idCita}
-✂️ *Servicio:* ${window.citaActual.servicio}
-🙌 *Con:* ${window.citaActual.profesional}
-
-❌ *Cita anterior:* ${window.citaActual.fecha} a las ${window.citaActual.hora}
-✅ *NUEVA CITA:* ${nuevaFecha} a las ${nuevaHora}
-
-(Quedo atento a la confirmación)`;
-
-                    window.location.href = `https://wa.me/${TELEFONO}?text=${encodeURIComponent(mensaje)}`;
+                    // Modificado por IA: Quitamos encodeURIComponent
+                    window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
                     // Restaurar botón
                     setTimeout(() => {
