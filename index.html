@@ -85,7 +85,7 @@
     }
     </script>
 
-    <script type="module">
+       <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     // Modificado por IA: Cambiamos addDoc por setDoc
     import { getFirestore, doc, onSnapshot, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -185,8 +185,10 @@
                     if (vidContainer) vidContainer.classList.add('hidden');
                 }
 
+                // Modificado por IA: Leemos de las nuevas listas separadas
                 renderDropdown('barberia', data.barberia, 'text-yellow-500');
-                renderDropdown('unas', data.unas, 'text-pink-500');
+                renderDropdown('manos', data.manos, 'text-pink-500');
+                renderDropdown('pies', data.pies, 'text-pink-500');
                 renderDropdown('cejas', data.cejas, 'text-purple-500');
                 renderDropdown('pestanas', data.pestanas, 'text-indigo-500'); 
 
@@ -244,12 +246,13 @@
         });
     });
 
+    // Modificado por IA: Soporte dinámico para múltiples selectores con opción "Ninguno"
     window.renderDropdown = function(tipo, lista, colorTextClass) {
         const ul = document.getElementById(`list-services-${tipo}`);
         if(!ul) return;
         
         let htmlNinguno = "";
-        if(tipo === 'cejas' || tipo === 'pestanas') {
+        if(['cejas', 'pestanas', 'manos', 'pies'].includes(tipo)) {
             htmlNinguno = `
                 <li class="p-4 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
                     onclick="seleccionarServicio('${tipo}', 'Ninguno', 0, 'text-gray-500')">
@@ -282,8 +285,9 @@
     };
 
     window.seleccionarServicio = function(tipo, fontName, precio, textColor) {
-        const inputId = tipo === 'barberia' ? 'servB' : (tipo === 'unas' ? 'servU' : (tipo === 'cejas' ? 'servCj' : 'servPs'));
-        const displayId = tipo === 'barberia' ? 'selected-service-barberia' : (tipo === 'unas' ? 'selected-service-unas' : (tipo === 'cejas' ? 'selected-service-cejas' : 'selected-service-pestanas'));
+        const mapInputs = { barberia: 'servB', unas: 'servU', cejas: 'servCj', pestanas: 'servPs', manos: 'servMn', pies: 'servPi' };
+        const inputId = mapInputs[tipo];
+        const displayId = `selected-service-${tipo}`;
         
         document.getElementById(inputId).value = fontName === 'Ninguno' ? 'Ninguno' : `${fontName} - $${precio.toLocaleString('es-CO')}`;
         
@@ -450,13 +454,24 @@
                     <input type="text" id="nomU" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     <input type="tel" id="telU" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     
-                    <div class="relative custom-dropdown z-40">
-                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-pink-500" onclick="toggleDropdown('unas')">
-                            <span id="selected-service-unas" class="text-gray-400">Selecciona un servicio...</span>
+                    <div class="relative custom-dropdown z-50">
+                        <label class="block text-[10px] text-pink-400 mb-1 ml-1 uppercase font-bold tracking-widest">Servicio de Manos</label>
+                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-pink-500" onclick="toggleDropdown('manos')">
+                            <span id="selected-service-manos" class="text-gray-500 italic">Ninguno seleccionado</span>
                             <span class="text-pink-500">▼</span>
                         </button>
-                        <ul id="list-services-unas" class="hidden absolute w-full mt-1 bg-gray-800 border border-pink-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto"></ul>
-                        <input type="text" id="servU" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                        <ul id="list-services-manos" class="hidden absolute w-full mt-1 bg-gray-800 border border-pink-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[60]"></ul>
+                        <input type="text" id="servMn" value="Ninguno" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
+                    </div>
+
+                    <div class="relative custom-dropdown z-40">
+                        <label class="block text-[10px] text-pink-400 mb-1 ml-1 uppercase font-bold tracking-widest">Servicio de Pies</label>
+                        <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-pink-500" onclick="toggleDropdown('pies')">
+                            <span id="selected-service-pies" class="text-gray-500 italic">Ninguno seleccionado</span>
+                            <span class="text-pink-500">▼</span>
+                        </button>
+                        <ul id="list-services-pies" class="hidden absolute w-full mt-1 bg-gray-800 border border-pink-600 rounded-lg shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[60]"></ul>
+                        <input type="text" id="servPi" value="Ninguno" required class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none" tabindex="-1">
                     </div>
 
                     <div class="pt-2 relative">
@@ -813,6 +828,7 @@
                 timestamp: new Date().toISOString()
             };
 
+            // Modificado por IA: Lógica de concatenación para Cejas y ahora también Uñas
             if (tipo === 'cejas') {
                 const sCj = document.getElementById('servCj').value;
                 const sPs = document.getElementById('servPs').value;
@@ -826,9 +842,21 @@
                 else if (sPs === 'Ninguno') datos.servicio = sCj;
                 else datos.servicio = `${sCj} + ${sPs}`;
 
+            } else if (tipo === 'unas') {
+                const sMn = document.getElementById('servMn').value;
+                const sPi = document.getElementById('servPi').value;
+
+                if (sMn === 'Ninguno' && sPi === 'Ninguno') {
+                    alert("Por favor selecciona al menos un servicio (Manos o Pies).");
+                    return;
+                }
+
+                if (sMn === 'Ninguno') datos.servicio = sPi;
+                else if (sPi === 'Ninguno') datos.servicio = sMn;
+                else datos.servicio = `${sMn} + ${sPi}`;
+
             } else {
-                const servID = tipo === 'barberia' ? 'servB' : 'servU';
-                datos.servicio = document.getElementById(servID).value;
+                datos.servicio = document.getElementById('servB').value;
             }
 
             txtBtn.innerText = "Procesando...";
@@ -859,7 +887,7 @@
                     const linkReprogramar = `https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/reprogramar.html?id=${codigoCita}`;
                     
                     // Modificado por IA: Usamos %0A para los saltos de línea y quitamos encodeURIComponent para proteger los emojis
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A(Quedo atento a la confirmación de disponibilidad)%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
                     
                     window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
