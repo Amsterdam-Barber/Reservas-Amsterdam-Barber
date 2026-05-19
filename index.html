@@ -884,7 +884,7 @@
 
                 setTimeout(() => {
                     // Enlace dinámico directo para reprogramar de forma autónoma
-                    const linkReprogramar = `https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/reprogramar.html?id=${codigoCita}`;
+                    const linkReprogramar = new URL(`reprogramar.html?id=${codigoCita}`, window.location.href).href;
                     
                     // Modificado por IA: Usamos %0A para los saltos de línea y quitamos encodeURIComponent para proteger los emojis
                     const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
