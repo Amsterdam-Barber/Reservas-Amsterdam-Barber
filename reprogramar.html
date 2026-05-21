@@ -200,7 +200,6 @@
             const container = document.getElementById(`hours-container`);
             document.getElementById('nuevaHora').value = ""; 
 
-            // Verificar si el profesional está de descanso
             if (window.descansosProf.includes(fechaStr)) {
                 container.innerHTML = `
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
@@ -216,6 +215,15 @@
             const ahora = new Date();
             const esHoy = (fechaStr === `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`);
             const horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+            
+            // LÓGICA DE 30 MINUTOS PARA UÑAS AL REPROGRAMAR
+            let intervaloMinutos = 15;
+            if (window.citaActual && window.citaActual.servicio) {
+                const s = window.citaActual.servicio.toLowerCase();
+                if (s.includes('manicura') || s.includes('pedicura') || s.includes('acrílicas') || s.includes('polygel') || s.includes('semipermanente') || s.includes('uñas') || s.includes('manos') || s.includes('pies')) {
+                    intervaloMinutos = 30;
+                }
+            }
             
             let timeSlots = [];
             let [h, m] = horaApertura.split(':').map(Number);
@@ -234,8 +242,8 @@
 
                 if (!pasada) timeSlots.push(hora12);
                 
-                m += 15;
-                if (m === 60) { h++; m = 0; }
+                m += intervaloMinutos;
+                if (m >= 60) { h++; m -= 60; }
             }
 
             if (timeSlots.length === 0) {
@@ -260,6 +268,16 @@
             }
         }
 
+        // FECHAS HUMANIZADAS AL REPROGRAMAR
+        const formatearFechaHumana = (fechaStr) => {
+            if (!fechaStr) return '';
+            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const [y, m, d] = fechaStr.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            return `${dias[dateObj.getDay()]} ${d} de ${meses[m - 1]} de ${y}`;
+        };
+
         window.enviarReprogramacion = async function(e) {
             e.preventDefault();
 
@@ -281,7 +299,6 @@
             btn.disabled = true;
 
             try {
-                // Actualizar documento en Firebase
                 const docRef = doc(db, "reservas", window.docIdFirestore);
                 await updateDoc(docRef, {
                     fecha: nuevaFecha,
@@ -296,13 +313,13 @@
                 btn.classList.add('bg-green-500');
 
                 setTimeout(() => {
-                    // Modificado por IA: Usamos %0A para evitar que los emojis se rompan al reprogramar
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AHe reprogramado mi cita desde el enlace:%0A%0A👤 *Cliente:* ${window.citaActual.nombre}%0A🆔 *ID Cita:* ${window.citaActual.idCita}%0A✂️ *Servicio:* ${window.citaActual.servicio}%0A🙌 *Con:* ${window.citaActual.profesional}%0A%0A❌ *Cita anterior:* ${window.citaActual.fecha} a las ${window.citaActual.hora}%0A✅ *NUEVA CITA:* ${nuevaFecha} a las ${nuevaHora}%0A%0A(Quedo atento a la confirmación)`;
+                    const fechaVieja = formatearFechaHumana(window.citaActual.fecha);
+                    const fechaNueva = formatearFechaHumana(nuevaFecha);
+                    
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AHe reprogramado mi cita desde el enlace:%0A%0A👤 *Cliente:* ${window.citaActual.nombre}%0A🆔 *ID Cita:* ${window.citaActual.idCita}%0A✂️ *Servicio:* ${window.citaActual.servicio}%0A🙌 *Con:* ${window.citaActual.profesional}%0A%0A❌ *Cita anterior:* ${fechaVieja} a las ${window.citaActual.hora}%0A✅ *NUEVA CITA:* ${fechaNueva} a las ${nuevaHora}%0A%0A(Quedo atento a la confirmación)`;
 
-                    // Modificado por IA: Quitamos encodeURIComponent
                     window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
-                    // Restaurar botón
                     setTimeout(() => {
                         txtBtn.innerText = textoOriginal;
                         btn.disabled = false;
