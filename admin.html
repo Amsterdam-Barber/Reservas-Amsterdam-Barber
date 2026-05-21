@@ -356,23 +356,28 @@
             const conteoEquipo = {}; const conteoServicios = {};
 
             reservas.forEach(r => {
-                if (r.fecha && r.fecha.startsWith(`${anoActual}-${mesActual}`)) {
-                    let precio = 0;
-                    if(r.servicio) {
-                        const match = r.servicio.match(/\$([\d.,]+)/);
-                        if(match) precio = parseInt(match[1].replace(/[.,]/g, ''));
+                try {
+                    // SUMA MATEMÁTICA CORREGIDA PARA PRECIOS COMBINADOS
+                    if (r.fecha && String(r.fecha).startsWith(`${anoActual}-${mesActual}`)) {
+                        let precioTotal = 0;
+                        if(r.servicio) {
+                            const matches = [...String(r.servicio).matchAll(/\$([\d.,]+)/g)];
+                            matches.forEach(m => {
+                                precioTotal += parseInt(m[1].replace(/[.,]/g, '')) || 0;
+                            });
+                        }
+                        ingresosMes += precioTotal;
                     }
-                    ingresosMes += precio;
-                }
 
-                if (r.fecha === fechaHoyStr) citasHoy++;
-                if (r.estado === "reprogramada") reprogramadas++;
+                    if (r.fecha === fechaHoyStr) citasHoy++;
+                    if (r.estado === "reprogramada") reprogramadas++;
 
-                if(r.profesional) { conteoEquipo[r.profesional] = (conteoEquipo[r.profesional] || 0) + 1; }
-                if(r.servicio) {
-                    const nombreServicio = r.servicio.split('-')[0].trim();
-                    conteoServicios[nombreServicio] = (conteoServicios[nombreServicio] || 0) + 1;
-                }
+                    if(r.profesional) { conteoEquipo[r.profesional] = (conteoEquipo[r.profesional] || 0) + 1; }
+                    if(r.servicio) {
+                        const nombreServicio = String(r.servicio).split('-')[0].trim();
+                        conteoServicios[nombreServicio] = (conteoServicios[nombreServicio] || 0) + 1;
+                    }
+                } catch(e) { console.error("Error al procesar reserva individual", e); }
             });
 
             document.getElementById('kpi-ingresos').innerText = `$${ingresosMes.toLocaleString('es-CO')}`;
@@ -382,17 +387,53 @@
             renderizarGraficos(conteoEquipo, conteoServicios);
 
             reservas.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+            
             document.getElementById('tabla-citas-body').innerHTML = reservas.map(r => {
-                const badgeColor = r.estado === 'reprogramada' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30';
-                return `
-                    <tr class="hover:bg-gray-700/50 transition-colors">
-                        <td class="px-4 py-3 font-medium text-white">${r.fecha || 'Sin fecha'} <span class="text-gray-500 text-[10px] ml-1">${r.hora || ''}</span></td>
-                        <td class="px-4 py-3">${r.nombre} <br><span class="text-[10px] text-gray-500">📱 ${r.celular}</span></td>
-                        <td class="px-4 py-3 text-xs">${r.servicio ? r.servicio.split('-')[0].trim() : 'N/A'}</td>
-                        <td class="px-4 py-3"><span class="bg-gray-900 px-2 py-1 rounded text-[10px] text-yellow-500 border border-gray-700">${r.profesional || 'N/A'}</span></td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-[10px] font-bold border ${badgeColor} uppercase tracking-wider">${r.estado || 'confirmada'}</span></td>
-                    </tr>
-                `;
+                try {
+                    const badgeColor = r.estado === 'reprogramada' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30';
+                    
+                    // LÓGICA DEL BOTÓN DE RECORDATORIO INTELIGENTE
+                    let reminderBtn = '';
+                    if(r.fecha && r.timestamp) {
+                        const hoyObj = new Date();
+                        hoyObj.setHours(0,0,0,0);
+                        const [y, m, d] = String(r.fecha).split('-').map(Number);
+                        const citaDate = new Date(y, m - 1, d);
+                        
+                        const diffTime = citaDate.getTime() - hoyObj.getTime();
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays === 1) { // La cita es para mañana
+                            const tsDate = new Date(r.timestamp);
+                            const tsDay = new Date(tsDate.getFullYear(), tsDate.getMonth(), tsDate.getDate());
+                            
+                            if (tsDay < hoyObj) { // Se agendó ayer o antes
+                                const servResumido = String(r.servicio).split('-')[0].trim();
+                                const msg = `¡Hola ${r.nombre}! Te escribimos de Amsterdam Barber Club para recordarte tu cita para ${servResumido} el día de mañana a las ${r.hora}. ¿Nos confirmas tu asistencia? 💈`;
+                                const link = `https://wa.me/57${String(r.celular).replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+                                reminderBtn = `<a href="${link}" target="_blank" class="ml-3 bg-green-500 text-gray-900 px-3 py-1 rounded-md text-[10px] font-bold animate-pulse hover:bg-green-400 hover:scale-105 transition shadow-[0_0_10px_rgba(34,197,94,0.5)] flex items-center gap-1"><span class="text-xs">📲</span> Recordar</a>`;
+                            } else { // Se agendó hoy para mañana
+                                reminderBtn = `<span class="ml-3 bg-gray-700 text-gray-400 px-3 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-help" title="Agendó hoy para mañana. No es necesario enviarle recordatorio."><span class="text-xs">🚫</span> Reciente</span>`;
+                            }
+                        }
+                    }
+
+                    return `
+                        <tr class="hover:bg-gray-700/50 transition-colors">
+                            <td class="px-4 py-3 font-medium text-white">${r.fecha || 'Sin fecha'} <span class="text-gray-500 text-[10px] ml-1">${r.hora || ''}</span></td>
+                            <td class="px-4 py-3">${r.nombre || 'N/A'} <br><span class="text-[10px] text-gray-500">📱 ${r.celular || 'N/A'}</span></td>
+                            <td class="px-4 py-3 text-xs">${r.servicio ? String(r.servicio).split('-')[0].trim() : 'N/A'}</td>
+                            <td class="px-4 py-3"><span class="bg-gray-900 px-2 py-1 rounded text-[10px] text-yellow-500 border border-gray-700">${r.profesional || 'N/A'}</span></td>
+                            <td class="px-4 py-3 flex items-center h-full">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold border ${badgeColor} uppercase tracking-wider inline-block">${r.estado || 'confirmada'}</span>
+                                ${reminderBtn}
+                            </td>
+                        </tr>
+                    `;
+                } catch(e) {
+                    console.error("Error cargando fila de tabla", e);
+                    return '';
+                }
             }).join('');
         };
 
