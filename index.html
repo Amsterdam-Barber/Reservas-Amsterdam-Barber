@@ -702,6 +702,10 @@
             
             const horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
             
+            // LÓGICA DE 30 MINUTOS PARA UÑAS
+            const esUnas = (tipo === 'unas');
+            const intervaloMinutos = esUnas ? 30 : 15;
+
             let timeSlots = [];
             let [h, m] = horaApertura.split(':').map(Number);
             
@@ -719,8 +723,8 @@
 
                 if (!pasada) timeSlots.push(hora12);
                 
-                m += 15;
-                if (m === 60) { h++; m = 0; }
+                m += intervaloMinutos;
+                if (m >= 60) { h++; m -= 60; }
             }
 
             if (timeSlots.length === 0) {
@@ -799,6 +803,16 @@
             document.getElementById('zona-dinamica').scrollIntoView({ behavior: 'smooth' });
         }
 
+        // FUNCIÓN DE FECHA HUMANIZADA
+        const formatearFechaHumana = (fechaStr) => {
+            if (!fechaStr) return '';
+            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const [y, m, d] = fechaStr.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            return `${dias[dateObj.getDay()]} ${d} de ${meses[m - 1]} de ${y}`;
+        };
+
         async function enviarReserva(e, tipo) {
             e.preventDefault();
             
@@ -813,7 +827,6 @@
             let fechaID = tipo === 'barberia' ? 'fechaB' : (tipo === 'unas' ? 'fechaU' : 'fechaC');
             let horaID = tipo === 'barberia' ? 'horaB' : (tipo === 'unas' ? 'horaU' : 'horaC');
 
-            // Generador del ID único de 6 caracteres
             const codigoCita = Math.random().toString(36).substring(2, 8).toUpperCase();
 
             let datos = {
@@ -828,7 +841,6 @@
                 timestamp: new Date().toISOString()
             };
 
-            // Modificado por IA: Lógica de concatenación para Cejas y ahora también Uñas
             if (tipo === 'cejas') {
                 const sCj = document.getElementById('servCj').value;
                 const sPs = document.getElementById('servPs').value;
@@ -864,12 +876,10 @@
             btn.disabled = true;
 
             try {
-                // 1. Almacenar en la base de datos Firestore de Firebase
                 if (window.guardarCitaInFirestore) {
-                    await window.guardarCitaInFirestore(datos, codigoCita); // Modificado por IA
+                    await window.guardarCitaInFirestore(datos, codigoCita); 
                 }
 
-                // 2. Enviar datos al sistema de Google Sheets actual
                 await fetch(WEB_APP_URL, {
                     method: 'POST', mode: 'no-cors',
                     body: JSON.stringify(datos), headers: { 'Content-Type': 'application/json' }
@@ -883,11 +893,10 @@
                 confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
 
                 setTimeout(() => {
-                    // Enlace dinámico directo para reprogramar de forma autónoma
                     const linkReprogramar = new URL(`reprogramar.html?id=${codigoCita}`, window.location.href).href;
+                    const fechaHumana = formatearFechaHumana(datos.fecha);
                     
-                    // Modificado por IA: Usamos %0A para los saltos de línea y quitamos encodeURIComponent para proteger los emojis
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${datos.fecha}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
+                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${fechaHumana}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
                     
                     window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
                     
