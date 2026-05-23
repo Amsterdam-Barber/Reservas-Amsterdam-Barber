@@ -342,7 +342,7 @@
             onSnapshot(collection(db, "reservas"), (snapshot) => {
                 const reservas = [];
                 snapshot.forEach(doc => reservas.push({ id: doc.id, ...doc.data() }));
-                procesarDashboard(reservas);
+                window.procesarDashboard(reservas); 
             });
         }
 
