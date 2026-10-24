@@ -19,9 +19,13 @@
     
     <meta property="og:title" content="💈 Amsterdam Barber Club | Barbería y Estética en Montenegro">
     <meta property="og:description" content="Agenda tu cita fácil y rápido para barbería, uñas y miradas. Los mejores profesionales de Montenegro enseguida del Chavo.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/">
+    <meta property="og:image" content="https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/img/logo.jpg">
+    <link rel="canonical" href="https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/">
     <link rel="icon" type="image/jpeg" href="img/logo.jpg">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
     <script type="application/ld+json">
@@ -29,9 +33,9 @@
       "@context": "https://schema.org",
       "@type": "BeautySalon",
       "name": "Amsterdam Barber Club",
-      "image": "https://amsterdam-barber-club.web.app/img/logo.jpg",
-      "@id": "https://amsterdam-barber-club.web.app",
-      "url": "https://amsterdam-barber-club.web.app",
+      "image": "https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/img/logo.jpg",
+      "@id": "https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/",
+      "url": "https://amsterdam-barber.github.io/Reservas-Amsterdam-Barber/",
       "telephone": "+573145586557",
       "priceRange": "$$",
       "address": {
@@ -86,9 +90,9 @@
     </script>
 
        <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
     // Modificado por IA: Cambiamos addDoc por setDoc
-    import { getFirestore, doc, onSnapshot, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
@@ -103,9 +107,27 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore();
 
-    // Modificado por IA: Usar setDoc para que el ID del documento sea el código secreto
+    // Cada hora tomada se registra en "ocupados" (sin datos del cliente) para que nadie más pueda reservarla.
+    // El mismo formato de ID se usa en reprogramar.html y admin.html.
+    const idTurno = (profesional, fecha, hora) =>
+        `${profesional}__${fecha}__${hora}`.replace(/[^a-zA-Z0-9_-]/gu, '_');
+
+    window.obtenerHorasOcupadas = async (profesional, fecha) => {
+        const q = query(collection(db, "ocupados"), where("profesional", "==", profesional), where("fecha", "==", fecha));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => d.data().hora);
+    };
+
+    // Guarda la cita con el código secreto como ID. La transacción falla con HORA_OCUPADA
+    // si otra persona tomó la misma hora con el mismo profesional, aunque sea al mismo tiempo.
     window.guardarCitaInFirestore = async (datos, idSecreto) => {
-        return await setDoc(doc(db, "reservas", idSecreto), datos);
+        const turnoRef = doc(db, "ocupados", idTurno(datos.profesional, datos.fecha, datos.hora));
+        await runTransaction(db, async (tx) => {
+            const turno = await tx.get(turnoRef);
+            if (turno.exists()) throw new Error('HORA_OCUPADA');
+            tx.set(turnoRef, { profesional: datos.profesional, fecha: datos.fecha, hora: datos.hora, creado: datos.timestamp });
+            tx.set(doc(db, "reservas", idSecreto), datos);
+        });
     };
 
     window.addEventListener('load', () => {
@@ -206,7 +228,7 @@
 
                     contenedor.innerHTML = fotosActivas.map((f, i) => `
                         <div class="flex-none w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)] bg-gray-800 h-40 rounded-lg overflow-hidden border border-${colorClase} shadow-lg group cursor-pointer snap-start" onclick="abrirLightbox('${cat}', ${i})">
-                            <img src="${f.url}" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                            <img src="${esc(f.url)}" loading="lazy" class="galeria-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                         </div>
                     `).join('');
                 };
@@ -217,13 +239,13 @@
 
                 // --- AGREGAMOS EL BOTÓN DE ZOOM (LUPA) EN EL AVATAR ---
                 const crearHtmlEquipo = (lista, nameInput, colorName, hexColor, tipo) => (lista || []).map(p => {
-                    const avatarUrl = p.foto || `https://ui-avatars.com/api/?name=${p.nombre}&background=1f2937&color=${hexColor}&size=150`;
+                    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nombre || '')}&background=1f2937&color=${hexColor}&size=150`;
                     return `
                     <label class="cursor-pointer text-center group flex-none relative" onchange="verificarDisponibilidad('${tipo}')">
-                        <input type="radio" name="${nameInput}" value="${p.nombre}" data-descansos='${JSON.stringify(p.descansos || [])}' required class="peer sr-only">
-                        
+                        <input type="radio" name="${nameInput}" value="${esc(p.nombre)}" data-descansos="${esc(JSON.stringify(p.descansos || []))}" required class="peer sr-only">
+
                         <div class="relative w-16 h-16 md:w-20 md:h-20 mx-auto">
-                            <img src="${p.foto}" onerror="this.src='${avatarUrl}'" 
+                            <img src="${esc(p.foto || avatarUrl)}" alt="${esc(p.nombre)}" data-fallback="${esc(avatarUrl)}" onerror="this.onerror=null; this.src=this.dataset.fallback;"
                                  class="w-full h-full rounded-full border-4 border-gray-600 peer-checked:border-${colorName}-500 peer-checked:scale-110 transition-all duration-300 object-cover shadow-lg">
                             
                             <button type="button" onclick="abrirFotoUnica(this.previousElementSibling.src, event)" class="absolute -top-1 -right-1 bg-gray-800 border border-gray-500 rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-gray-700 hover:scale-110 transition-transform text-[10px] z-10" title="Ver foto">
@@ -231,7 +253,7 @@
                             </button>
                         </div>
 
-                        <span class="block mt-2 text-xs md:text-sm text-gray-400 peer-checked:text-white peer-checked:font-bold">${p.nombre}</span>
+                        <span class="block mt-2 text-xs md:text-sm text-gray-400 peer-checked:text-white peer-checked:font-bold">${esc(p.nombre)}</span>
                     </label>
                 `}).join('');
 
@@ -247,15 +269,19 @@
     });
 
     // Modificado por IA: Soporte dinámico para múltiples selectores con opción "Ninguno"
+    // Los servicios se guardan aquí y el onclick solo pasa el índice, así ningún nombre puede romper el HTML
+    window.serviciosPorTipo = {};
+
     window.renderDropdown = function(tipo, lista, colorTextClass) {
         const ul = document.getElementById(`list-services-${tipo}`);
         if(!ul) return;
-        
+        window.serviciosPorTipo[tipo] = lista || [];
+
         let htmlNinguno = "";
         if(['cejas', 'pestanas', 'manos', 'pies'].includes(tipo)) {
             htmlNinguno = `
                 <li class="p-4 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
-                    onclick="seleccionarServicio('${tipo}', 'Ninguno', 0, 'text-gray-500')">
+                    onclick="seleccionarServicio('${tipo}', -1, 'text-gray-500')">
                     <span class="font-bold text-gray-400">Ninguno</span>
                 </li>`;
         }
@@ -265,12 +291,12 @@
             return;
         }
         
-        ul.innerHTML = htmlNinguno + lista.map(s => `
+        ul.innerHTML = htmlNinguno + lista.map((s, i) => `
             <li class="p-4 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
-                onclick="seleccionarServicio('${tipo}', '${s.nombre}', ${s.precio}, '${colorTextClass}')">
+                onclick="seleccionarServicio('${tipo}', ${i}, '${colorTextClass}')">
                 <div class="flex justify-between items-center">
-                    <span class="font-bold text-gray-200">${s.nombre}</span>
-                    <span class="${colorTextClass} font-bold">$${s.precio.toLocaleString('es-CO')}</span>
+                    <span class="font-bold text-gray-200">${esc(s.nombre)}</span>
+                    <span class="${colorTextClass} font-bold">$${(Number(s.precio) || 0).toLocaleString('es-CO')}</span>
                 </div>
             </li>
         `).join('');
@@ -284,17 +310,20 @@
         ul.classList.toggle('hidden');
     };
 
-    window.seleccionarServicio = function(tipo, fontName, precio, textColor) {
+    window.seleccionarServicio = function(tipo, indice, textColor) {
         const mapInputs = { barberia: 'servB', unas: 'servU', cejas: 'servCj', pestanas: 'servPs', manos: 'servMn', pies: 'servPi' };
         const inputId = mapInputs[tipo];
         const displayId = `selected-service-${tipo}`;
-        
+        const servicio = indice < 0 ? null : window.serviciosPorTipo[tipo][indice];
+        const fontName = servicio ? servicio.nombre : 'Ninguno';
+        const precio = servicio ? (Number(servicio.precio) || 0) : 0;
+
         document.getElementById(inputId).value = fontName === 'Ninguno' ? 'Ninguno' : `${fontName} - $${precio.toLocaleString('es-CO')}`;
-        
+
         if(fontName === 'Ninguno') {
             document.getElementById(displayId).innerHTML = `<span class="text-gray-500 italic">Ninguno seleccionado</span>`;
         } else {
-            document.getElementById(displayId).innerHTML = `<span class="text-white">${fontName}</span> <span class="${textColor} font-bold ml-2"> $${precio.toLocaleString('es-CO')}</span>`;
+            document.getElementById(displayId).innerHTML = `<span class="text-white">${esc(fontName)}</span> <span class="${textColor} font-bold ml-2"> $${precio.toLocaleString('es-CO')}</span>`;
         }
         
         document.getElementById(`list-services-${tipo}`).classList.add('hidden');
@@ -620,6 +649,11 @@
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwqvwGf_vfvzuWHVUGiTlZA45BTiT34mhbXGH85QtUKIQ64PMePrThRson2fFXheFbn/exec";
         const TELEFONO = "573133454273";
 
+        // Escapa texto antes de insertarlo con innerHTML (evita inyección de código)
+        function esc(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
         function generarFechas() {
             const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -658,8 +692,12 @@
             });
         }
 
-        window.actualizarHoras = function(fechaStr, tipo, diaSemana) {
-            document.getElementById(`fecha${tipo.charAt(0).toUpperCase()}`).value = fechaStr; 
+        // Evita que una consulta lenta de horas ocupadas pinte encima de una más reciente
+        const consultaHoras = { barberia: 0, unas: 0, cejas: 0 };
+
+        window.actualizarHoras = async function(fechaStr, tipo, diaSemana) {
+            const consulta = ++consultaHoras[tipo];
+            document.getElementById(`fecha${tipo.charAt(0).toUpperCase()}`).value = fechaStr;
             
             const profName = tipo === 'barberia' ? 'profB' : (tipo === 'unas' ? 'profU' : 'profC');
             const profSeleccionado = document.querySelector(`input[name="${profName}"]:checked`);
@@ -682,13 +720,31 @@
                 container.innerHTML = `
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
                         <span class="text-2xl block mb-2">🏖️</span>
-                        <p class="text-gray-200 font-bold text-sm">${nombreProf} está de descanso</p>
+                        <p class="text-gray-200 font-bold text-sm">${esc(nombreProf)} está de descanso</p>
                         <p class="text-gray-400 text-xs mt-1">Este profesional no está disponible hoy. Elige otro día u otro profesional.</p>
                     </div>
                 `;
-                container.className = "grid grid-cols-1"; 
+                container.className = "grid grid-cols-1";
                 return;
             }
+
+            if (!profSeleccionado) {
+                container.innerHTML = `<p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg">Elige primero con quién te atiendes para ver sus horas libres.</p>`;
+                container.className = "grid grid-cols-1";
+                return;
+            }
+
+            container.innerHTML = `<p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg animate-pulse">Consultando horas disponibles...</p>`;
+            container.className = "grid grid-cols-1";
+
+            let horasOcupadas = [];
+            try {
+                horasOcupadas = await window.obtenerHorasOcupadas(nombreProf, fechaStr);
+            } catch (err) {
+                // Si no se pudo consultar, se muestran todas; la transacción al guardar sigue impidiendo duplicados
+                console.error("No se pudieron consultar las horas ocupadas:", err);
+            }
+            if (consulta !== consultaHoras[tipo]) return;
 
             const colors = {
                 barberia: { bg: 'peer-checked:bg-yellow-600', border: 'peer-checked:border-yellow-500', hover: 'hover:border-yellow-500' },
@@ -721,8 +777,8 @@
                     if (hora24 <= horaActual) pasada = true;
                 }
 
-                if (!pasada) timeSlots.push(hora12);
-                
+                if (!pasada && !horasOcupadas.includes(hora12)) timeSlots.push(hora12);
+
                 m += intervaloMinutos;
                 if (m >= 60) { h++; m -= 60; }
             }
@@ -731,8 +787,8 @@
                 container.innerHTML = `
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
                         <span class="text-2xl block mb-1">🚫</span>
-                        <p class="text-gray-300 font-bold text-sm">Cerrado por hoy</p>
-                        <p class="text-gray-500 text-xs mt-1">Ya cerramos o no hay más citas disponibles. Elige otro día arriba.</p>
+                        <p class="text-gray-300 font-bold text-sm">Sin horas disponibles</p>
+                        <p class="text-gray-500 text-xs mt-1">Ya cerramos o no hay más citas disponibles ese día. Elige otro día u otro profesional.</p>
                     </div>
                 `;
                 container.className = "grid grid-cols-1"; 
@@ -876,14 +932,29 @@
             btn.disabled = true;
 
             try {
-                if (window.guardarCitaInFirestore) {
-                    await window.guardarCitaInFirestore(datos, codigoCita); 
+                // Guarda la cita y aparta la hora del profesional en una sola transacción
+                await window.guardarCitaInFirestore(datos, codigoCita);
+            } catch (error) {
+                console.error("Error al guardar la cita:", error);
+                if (error.message === 'HORA_OCUPADA') {
+                    alert(`Lo sentimos, alguien acaba de reservar las ${datos.hora} con ${datos.profesional}. Por favor elige otra hora.`);
+                    verificarDisponibilidad(tipo);
+                } else {
+                    alert("Error al guardar la cita. Revisa tu conexión e intenta de nuevo.");
                 }
+                txtBtn.innerText = textoOriginal;
+                spinner.classList.add('hidden');
+                btn.disabled = false;
+                return;
+            }
 
+            try {
+                // El Apps Script registra la cita y envía el aviso por Telegram (el token vive allá, no en esta página).
+                // Si falla, la cita ya quedó guardada: no se muestra error para que el cliente no la duplique.
                 await fetch(WEB_APP_URL, {
                     method: 'POST', mode: 'no-cors',
                     body: JSON.stringify(datos), headers: { 'Content-Type': 'application/json' }
-                });
+                }).catch(err => console.error("Error notificando al Apps Script:", err));
 
                 txtBtn.innerText = "¡Cita Confirmada! 🎉";
                 spinner.classList.add('hidden');
@@ -896,9 +967,23 @@
                     const linkReprogramar = new URL(`reprogramar.html?id=${codigoCita}`, window.location.href).href;
                     const fechaHumana = formatearFechaHumana(datos.fecha);
                     
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AQuiero confirmar una cita:%0A%0A👤 *Cliente:* ${datos.nombre}%0A📱 *Teléfono:* ${datos.celular}%0A✂️ *Servicio:* ${datos.servicio}%0A🙌 *Atiende:* ${datos.profesional}%0A📅 *Fecha:* ${fechaHumana}%0A⏰ *Hora:* ${datos.hora}%0A🆔 *ID Cita:* ${codigoCita}%0A%0A📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*%0A${linkReprogramar}`;
-                    
-                    window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
+                    const mensaje = [
+                        '¡Hola Amsterdam Barber Club! 💈',
+                        'Quiero confirmar una cita:',
+                        '',
+                        `👤 *Cliente:* ${datos.nombre}`,
+                        `📱 *Teléfono:* ${datos.celular}`,
+                        `✂️ *Servicio:* ${datos.servicio}`,
+                        `🙌 *Atiende:* ${datos.profesional}`,
+                        `📅 *Fecha:* ${fechaHumana}`,
+                        `⏰ *Hora:* ${datos.hora}`,
+                        `🆔 *ID Cita:* ${codigoCita}`,
+                        '',
+                        '📍 *Si necesitas cambiar la hora de tu cita, ingresa a este enlace:*',
+                        linkReprogramar
+                    ].join('\n');
+
+                    window.location.href = `https://wa.me/${TELEFONO}?text=${encodeURIComponent(mensaje)}`;
                     
                     setTimeout(() => {
                         txtBtn.innerText = textoOriginal;
@@ -911,8 +996,8 @@
                 }, 2500);
 
             } catch (error) {
-                console.error("Error al procesar la cita:", error);
-                alert("Error al guardar la cita.");
+                // La cita ya está guardada en este punto; solo se restaura el botón
+                console.error("Error después de guardar la cita:", error);
                 txtBtn.innerText = textoOriginal;
                 spinner.classList.add('hidden');
                 btn.disabled = false;

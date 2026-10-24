@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Reprogramar Cita | Amsterdam Barber Club</title>
     <link rel="icon" type="image/jpeg" href="img/logo.jpg">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -76,8 +76,8 @@
     </main>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
@@ -92,6 +92,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore();
         const TELEFONO = "573133454273";
+
+        // Escapa texto antes de insertarlo con innerHTML (evita inyección de código)
+        const esc = (valor) => String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // Mismo formato de ID de turno que index.html y admin.html
+        const idTurno = (profesional, fecha, hora) =>
+            `${profesional}__${fecha}__${hora}`.replace(/[^a-zA-Z0-9_-]/gu, '_');
+
+        let consultaHoras = 0;
 
         // Variables globales para el estado de la aplicación
         window.citaActual = null;
@@ -195,8 +204,9 @@
             `).join('');
         }
 
-        window.actualizarHoras = function(fechaStr, diaSemana) {
-            document.getElementById('nuevaFecha').value = fechaStr; 
+        window.actualizarHoras = async function(fechaStr, diaSemana) {
+            const consulta = ++consultaHoras;
+            document.getElementById('nuevaFecha').value = fechaStr;
             const container = document.getElementById(`hours-container`);
             document.getElementById('nuevaHora').value = ""; 
 
@@ -204,13 +214,27 @@
                 container.innerHTML = `
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
                         <span class="text-2xl block mb-2">🏖️</span>
-                        <p class="text-gray-200 font-bold text-sm">${window.citaActual.profesional} está de descanso</p>
+                        <p class="text-gray-200 font-bold text-sm">${esc(window.citaActual.profesional)} está de descanso</p>
                         <p class="text-gray-400 text-xs mt-1">Elige otro día para reprogramar con este profesional.</p>
                     </div>
                 `;
-                container.className = "grid grid-cols-1"; 
+                container.className = "grid grid-cols-1";
                 return;
             }
+
+            container.innerHTML = `<p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg animate-pulse">Consultando horas disponibles...</p>`;
+            container.className = "grid grid-cols-1";
+
+            let horasOcupadas = [];
+            try {
+                const q = query(collection(db, "ocupados"), where("profesional", "==", window.citaActual.profesional), where("fecha", "==", fechaStr));
+                const snap = await getDocs(q);
+                horasOcupadas = snap.docs.map(d => d.data().hora);
+            } catch (err) {
+                // Si no se pudo consultar, se muestran todas; la transacción al guardar sigue impidiendo duplicados
+                console.error("No se pudieron consultar las horas ocupadas:", err);
+            }
+            if (consulta !== consultaHoras) return;
 
             const ahora = new Date();
             const esHoy = (fechaStr === `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`);
@@ -240,7 +264,7 @@
                     if (hora24 <= horaActual) pasada = true;
                 }
 
-                if (!pasada) timeSlots.push(hora12);
+                if (!pasada && !horasOcupadas.includes(hora12)) timeSlots.push(hora12);
                 
                 m += intervaloMinutos;
                 if (m >= 60) { h++; m -= 60; }
@@ -250,8 +274,8 @@
                 container.innerHTML = `
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
                         <span class="text-2xl block mb-1">🚫</span>
-                        <p class="text-gray-300 font-bold text-sm">Cerrado por hoy</p>
-                        <p class="text-gray-500 text-xs mt-1">Ya cerramos o no hay más citas disponibles.</p>
+                        <p class="text-gray-300 font-bold text-sm">Sin horas disponibles</p>
+                        <p class="text-gray-500 text-xs mt-1">Ya cerramos o no hay más citas disponibles ese día. Elige otro día.</p>
                     </div>
                 `;
                 container.className = "grid grid-cols-1"; 
@@ -298,27 +322,73 @@
             spinner.classList.remove('hidden');
             btn.disabled = true;
 
-            try {
-                const docRef = doc(db, "reservas", window.docIdFirestore);
-                await updateDoc(docRef, {
-                    fecha: nuevaFecha,
-                    hora: nuevaHora,
-                    estado: "reprogramada",
-                    timestampActualizacion: new Date().toISOString()
-                });
+            const cita = window.citaActual;
+            const turnoViejo = idTurno(cita.profesional, cita.fecha, cita.hora);
+            const turnoNuevo = idTurno(cita.profesional, nuevaFecha, nuevaHora);
+            const ahoraIso = new Date().toISOString();
 
+            try {
+                // Aparta la nueva hora, libera la anterior y actualiza la cita en una sola transacción
+                await runTransaction(db, async (tx) => {
+                    if (turnoNuevo !== turnoViejo) {
+                        const nuevoRef = doc(db, "ocupados", turnoNuevo);
+                        const ocupado = await tx.get(nuevoRef);
+                        if (ocupado.exists()) throw new Error('HORA_OCUPADA');
+                        tx.set(nuevoRef, { profesional: cita.profesional, fecha: nuevaFecha, hora: nuevaHora, creado: ahoraIso });
+                        tx.delete(doc(db, "ocupados", turnoViejo));
+                    }
+                    tx.update(doc(db, "reservas", window.docIdFirestore), {
+                        fecha: nuevaFecha,
+                        hora: nuevaHora,
+                        estado: "reprogramada",
+                        timestampActualizacion: ahoraIso
+                    });
+                });
+            } catch (error) {
+                console.error("Error al actualizar:", error);
+                if (error.message === 'HORA_OCUPADA') {
+                    alert(`Lo sentimos, alguien acaba de reservar las ${nuevaHora} con ${cita.profesional}. Por favor elige otra hora.`);
+                    const radioDia = document.querySelector('input[name="r-date"]:checked');
+                    if (radioDia) window.actualizarHoras(radioDia.value, parseInt(radioDia.getAttribute('data-dia-semana')));
+                } else {
+                    alert("Error al reprogramar. Intenta de nuevo.");
+                }
+                txtBtn.innerText = textoOriginal;
+                spinner.classList.add('hidden');
+                btn.disabled = false;
+                return;
+            }
+
+            // Si el cliente vuelve a esta pestaña y reprograma otra vez, debe partir de la nueva hora
+            window.citaActual = { ...cita, fecha: nuevaFecha, hora: nuevaHora, estado: "reprogramada" };
+
+            try {
                 txtBtn.innerText = "¡Cita Actualizada! 🎉";
                 spinner.classList.add('hidden');
                 btn.classList.remove('bg-yellow-600');
                 btn.classList.add('bg-green-500');
+                document.getElementById('res-fecha-hora').innerText = `${nuevaFecha} a las ${nuevaHora}`;
 
                 setTimeout(() => {
-                    const fechaVieja = formatearFechaHumana(window.citaActual.fecha);
+                    const fechaVieja = formatearFechaHumana(cita.fecha);
                     const fechaNueva = formatearFechaHumana(nuevaFecha);
                     
-                    const mensaje = `¡Hola Amsterdam Barber Club! 💈%0AHe reprogramado mi cita desde el enlace:%0A%0A👤 *Cliente:* ${window.citaActual.nombre}%0A🆔 *ID Cita:* ${window.citaActual.idCita}%0A✂️ *Servicio:* ${window.citaActual.servicio}%0A🙌 *Con:* ${window.citaActual.profesional}%0A%0A❌ *Cita anterior:* ${fechaVieja} a las ${window.citaActual.hora}%0A✅ *NUEVA CITA:* ${fechaNueva} a las ${nuevaHora}%0A%0A(Quedo atento a la confirmación)`;
+                    const mensaje = [
+                        '¡Hola Amsterdam Barber Club! 💈',
+                        'He reprogramado mi cita desde el enlace:',
+                        '',
+                        `👤 *Cliente:* ${cita.nombre}`,
+                        `🆔 *ID Cita:* ${cita.idCita}`,
+                        `✂️ *Servicio:* ${cita.servicio}`,
+                        `🙌 *Con:* ${cita.profesional}`,
+                        '',
+                        `❌ *Cita anterior:* ${fechaVieja} a las ${cita.hora}`,
+                        `✅ *NUEVA CITA:* ${fechaNueva} a las ${nuevaHora}`,
+                        '',
+                        '(Quedo atento a la confirmación)'
+                    ].join('\n');
 
-                    window.location.href = `https://wa.me/${TELEFONO}?text=${mensaje}`;
+                    window.location.href = `https://wa.me/${TELEFONO}?text=${encodeURIComponent(mensaje)}`;
                     
                     setTimeout(() => {
                         txtBtn.innerText = textoOriginal;
@@ -329,8 +399,8 @@
                 }, 1500);
 
             } catch (error) {
-                console.error("Error al actualizar:", error);
-                alert("Error al reprogramar. Intenta de nuevo.");
+                // La cita ya quedó reprogramada en este punto; solo se restaura el botón
+                console.error("Error después de reprogramar:", error);
                 txtBtn.innerText = textoOriginal;
                 spinner.classList.add('hidden');
                 btn.disabled = false;

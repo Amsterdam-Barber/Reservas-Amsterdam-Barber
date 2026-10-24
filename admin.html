@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Amsterdam Barber Club</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, uploadBytesResumable, getDownloadURL, getMetadata, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, uploadBytesResumable, getDownloadURL, getMetadata, deleteObject } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBG_Ni7d3T3u5X4O4SqreeUw-FyRD9dxaI",
@@ -27,6 +26,14 @@
         const auth = getAuth();
         const db = getFirestore();
         const storage = getStorage();
+
+        // Escapa texto antes de insertarlo con innerHTML. Las citas las escriben los clientes:
+        // sin esto, un "nombre" con código HTML se ejecutaría con la sesión del administrador.
+        const esc = (valor) => String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // Mismo formato de ID de turno que index.html y reprogramar.html
+        const idTurno = (profesional, fecha, hora) =>
+            `${profesional}__${fecha}__${hora}`.replace(/[^a-zA-Z0-9_-]/gu, '_');
 
         window.showSection = (sectionId) => {
             document.querySelectorAll('.admin-page').forEach(p => p.classList.add('hidden'));
@@ -211,15 +218,15 @@
 
                 contenedor.innerHTML = lista.map((f, i) => `
                     <div class="bg-gray-900 p-2 rounded-xl flex gap-3 border ${f.activa ? 'border-gray-600' : 'border-red-900/50 opacity-60'} transition-all relative group">
-                        <img src="${f.url}" class="w-16 h-16 object-cover rounded-lg border border-gray-700">
+                        <img src="${esc(f.url)}" class="w-16 h-16 object-cover rounded-lg border border-gray-700">
                         <div class="flex-1 flex flex-col justify-center">
                             <p class="text-[10px] text-gray-400">📅 ${new Date(f.fecha).toLocaleDateString('es-CO')} - ${new Date(f.fecha).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}</p>
-                            <p class="text-[10px] text-yellow-500 font-bold">⚖️ ${f.size} MB</p>
+                            <p class="text-[10px] text-yellow-500 font-bold">⚖️ ${esc(f.size)} MB</p>
                             <div class="mt-1 flex gap-2">
                                 <button onclick="toggleEstadoGaleria('${cat}', ${i}, ${!f.activa})" class="text-[10px] px-2 py-1 rounded font-bold ${f.activa ? 'bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}">
                                     ${f.activa ? '👁️ En línea' : '🙈 Oculta'}
                                 </button>
-                                <button onclick="eliminarFotoGaleria('${cat}', ${i}, '${f.ref}')" class="text-[10px] px-2 py-1 rounded font-bold bg-red-900/40 text-red-500 hover:bg-red-600 hover:text-white">
+                                <button onclick="eliminarFotoGaleria('${cat}', ${i})"class="text-[10px] px-2 py-1 rounded font-bold bg-red-900/40 text-red-500 hover:bg-red-600 hover:text-white">
                                     🗑️ Borrar
                                 </button>
                             </div>
@@ -287,17 +294,17 @@
             await setDoc(docRef, data);
         };
 
-        window.eliminarFotoGaleria = async (cat, index, fileRef) => {
+        window.eliminarFotoGaleria = async (cat, index) => {
             if(!confirm("⚠️ ¿Seguro que quieres eliminar esta foto definitivamente?")) return;
-            
+
             try {
-                const storageReference = ref(storage, fileRef);
-                await deleteObject(storageReference).catch(e => console.log("Archivo ya no existía en Storage"));
-                
                 const docRef = doc(db, "configuracion", "negocio");
                 const snap = await getDoc(docRef);
                 const data = snap.data();
-                
+
+                const storageReference = ref(storage, data.galeria[cat][index].ref);
+                await deleteObject(storageReference).catch(e => console.log("Archivo ya no existía en Storage"));
+
                 data.galeria[cat].splice(index, 1);
                 await setDoc(docRef, data);
                 
@@ -327,8 +334,6 @@
 
         window.logout = () => signOut(auth);
 
-        let chartEquipoInstancia = null;
-        let chartServiciosInstancia = null;
 
         function escucharDatos() {
             onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
@@ -343,49 +348,47 @@
                 const reservas = [];
                 snapshot.forEach(doc => reservas.push({ id: doc.id, ...doc.data() }));
                 window.procesarDashboard(reservas); // 🔧 CORRECCIÓN 2
+                sincronizarTurnosOcupados(reservas);
             });
         }
 
-        window.procesarDashboard = function(reservas) {
+        // Las citas creadas antes de existir la colección "ocupados" no tienen su hora apartada.
+        // Al entrar el administrador se registran las de hoy en adelante (una vez por sesión).
+        let turnosSincronizados = false;
+        async function sincronizarTurnosOcupados(reservas) {
+            if (turnosSincronizados) return;
+            turnosSincronizados = true;
+
             const hoy = new Date();
-            const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
-            const anoActual = hoy.getFullYear();
-            const fechaHoyStr = `${anoActual}-${mesActual}-${String(hoy.getDate()).padStart(2, '0')}`;
+            const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+            const futuras = reservas.filter(r => r.fecha >= hoyStr && r.hora && r.profesional);
 
-            let ingresosMes = 0; let citasHoy = 0; let reprogramadas = 0;
-            const conteoEquipo = {}; const conteoServicios = {};
+            const resultados = await Promise.allSettled(futuras.map(r =>
+                setDoc(doc(db, "ocupados", idTurno(r.profesional, r.fecha, r.hora)),
+                    { profesional: r.profesional, fecha: r.fecha, hora: r.hora, creado: r.timestamp || new Date().toISOString() })
+            ));
+            const fallidos = resultados.filter(r => r.status === 'rejected');
+            if (fallidos.length) console.error("No se pudieron registrar algunos turnos ocupados:", fallidos[0].reason);
+        }
 
-            reservas.forEach(r => {
-                try {
-                    // Suma de ingresos para precios individuales o combinados
-                    if (r.fecha && String(r.fecha).startsWith(`${anoActual}-${mesActual}`)) {
-                        let precioTotal = 0;
-                        if(r.servicio) {
-                            const matches = [...String(r.servicio).matchAll(/\$([\d.,]+)/g)];
-                            matches.forEach(m => {
-                                precioTotal += parseInt(m[1].replace(/[.,]/g, '')) || 0;
-                            });
-                        }
-                        ingresosMes += precioTotal;
-                    }
-
-                    if (r.fecha === fechaHoyStr) citasHoy++;
-                    if (r.estado === "reprogramada") reprogramadas++;
-
-                    if(r.profesional) { conteoEquipo[r.profesional] = (conteoEquipo[r.profesional] || 0) + 1; }
-                    if(r.servicio) {
-                        const nombreServicio = String(r.servicio).split('-')[0].trim();
-                        conteoServicios[nombreServicio] = (conteoServicios[nombreServicio] || 0) + 1;
-                    }
-                } catch(e) { console.error("Error al procesar reserva individual", e); }
+        // --- NUEVA FUNCIÓN PARA EL BUSCADOR EN TIEMPO REAL ---
+        window.filtrarCitas = function() {
+            const textoBusqueda = document.getElementById('buscador-citas').value.toLowerCase();
+            const filas = document.querySelectorAll('#tabla-citas-body tr');
+            
+            filas.forEach(fila => {
+                const contenidoFila = fila.innerText.toLowerCase();
+                if (contenidoFila.includes(textoBusqueda)) {
+                    fila.style.display = '';
+                } else {
+                    fila.style.display = 'none';
+                }
             });
+        };
 
-            document.getElementById('kpi-ingresos').innerText = `$${ingresosMes.toLocaleString('es-CO')}`;
-            document.getElementById('kpi-hoy').innerText = citasHoy;
-            document.getElementById('kpi-reprogramadas').innerText = reprogramadas;
-
-            window.renderizarGraficos(conteoEquipo, conteoServicios); // 🔧 CORRECCIÓN 3
-
+        // --- FUNCIÓN ACTUALIZADA DEL HISTORIAL (SIN GRÁFICAS) ---
+        window.procesarDashboard = function(reservas) {
+            // Ordenar las reservas de la más reciente a la más antigua
             reservas.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
             
             document.getElementById('tabla-citas-body').innerHTML = reservas.map(r => {
@@ -410,21 +413,22 @@
                                 const servResumido = String(r.servicio).split('-')[0].trim();
                                 const msg = `¡Hola ${r.nombre}! Te escribimos de Amsterdam Barber Club para recordarte tu cita para ${servResumido} el día de mañana a las ${r.hora}. ¿Nos confirmas tu asistencia? 💈`;
                                 const link = `https://wa.me/57${String(r.celular).replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
-                                reminderBtn = `<a href="${link}" target="_blank" class="ml-3 bg-green-500 text-gray-900 px-3 py-1 rounded-md text-[10px] font-bold animate-pulse hover:bg-green-400 hover:scale-105 transition shadow-[0_0_10px_rgba(34,197,94,0.5)] flex items-center gap-1 inline-flex"><span class="text-xs">📲</span> Recordar</a>`;
+                                reminderBtn = `<a href="${esc(link)}" target="_blank" rel="noopener"class="ml-3 bg-green-500 text-gray-900 px-3 py-1 rounded-md text-[10px] font-bold animate-pulse hover:bg-green-400 hover:scale-105 transition shadow-[0_0_10px_rgba(34,197,94,0.5)] flex items-center gap-1 inline-flex"><span class="text-xs">📲</span> Recordar</a>`;
                             } else { 
                                 reminderBtn = `<span class="ml-3 bg-gray-700 text-gray-400 px-3 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-help inline-flex" title="Agendó hoy para mañana. No es necesario enviarle recordatorio."><span class="text-xs">🚫</span> Reciente</span>`;
                             }
                         }
                     }
 
+                    // Agregamos el ID en la primera columna para que sea fácil de buscar
                     return `
                         <tr class="hover:bg-gray-700/50 transition-colors">
-                            <td class="px-4 py-3 font-medium text-white">${r.fecha || 'Sin fecha'} <span class="text-gray-500 text-[10px] ml-1">${r.hora || ''}</span></td>
-                            <td class="px-4 py-3">${r.nombre || 'N/A'} <br><span class="text-[10px] text-gray-500">📱 ${r.celular || 'N/A'}</span></td>
-                            <td class="px-4 py-3 text-xs">${r.servicio ? String(r.servicio).split('-')[0].trim() : 'N/A'}</td>
-                            <td class="px-4 py-3"><span class="bg-gray-900 px-2 py-1 rounded text-[10px] text-yellow-500 border border-gray-700">${r.profesional || 'N/A'}</span></td>
+                            <td class="px-4 py-3 font-medium text-white">${esc(r.fecha || 'Sin fecha')} <span class="text-gray-500 text-[10px] ml-1">${esc(r.hora || '')}</span><br><span class="text-[9px] text-gray-500 uppercase">ID: ${esc(r.id)}</span></td>
+                            <td class="px-4 py-3">${esc(r.nombre || 'N/A')} <br><span class="text-[10px] text-gray-500">📱 ${esc(r.celular || 'N/A')}</span></td>
+                            <td class="px-4 py-3 text-xs">${esc(r.servicio ? String(r.servicio).split('-')[0].trim() : 'N/A')}</td>
+                            <td class="px-4 py-3"><span class="bg-gray-900 px-2 py-1 rounded text-[10px] text-yellow-500 border border-gray-700">${esc(r.profesional || 'N/A')}</span></td>
                             <td class="px-4 py-3 flex items-center h-full">
-                                <span class="px-2 py-1 rounded-full text-[10px] font-bold border ${badgeColor} uppercase tracking-wider inline-block">${r.estado || 'confirmada'}</span>
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold border ${badgeColor} uppercase tracking-wider inline-block">${esc(r.estado || 'confirmada')}</span>
                                 ${reminderBtn}
                             </td>
                         </tr>
@@ -436,31 +440,6 @@
             }).join('');
         };
 
-        window.renderizarGraficos = function(conteoEquipo, conteoServicios) {
-            if (chartEquipoInstancia) chartEquipoInstancia.destroy();
-            if (chartServiciosInstancia) chartServiciosInstancia.destroy();
-
-            const ctxEquipo = document.getElementById('chart-equipo').getContext('2d');
-            chartEquipoInstancia = new Chart(ctxEquipo, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(conteoEquipo),
-                    datasets: [{ label: 'Citas', data: Object.values(conteoEquipo), backgroundColor: 'rgba(234, 179, 8, 0.8)', borderRadius: 4 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#9ca3af', stepSize: 1 } }, x: { ticks: { color: '#9ca3af' } } } }
-            });
-
-            const ctxServ = document.getElementById('chart-servicios').getContext('2d');
-            chartServiciosInstancia = new Chart(ctxServ, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(conteoServicios),
-                    datasets: [{ data: Object.values(conteoServicios), backgroundColor: ['#eab308', '#ec4899', '#a855f7', '#3b82f6', '#10b981'], borderWidth: 0 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#d1d5db', padding: 20 } } } }
-            });
-        };
-
         function renderizarInterfaz(data) {
             if (!data) return;
 
@@ -468,8 +447,8 @@
             const renderLista = (id, lista, cat, color) => {
                 document.getElementById(id).innerHTML = (lista || []).map((s, i) => `
                     <div class="flex gap-2 mb-3">
-                        <input type="text" value="${s.nombre}" onchange="cambiarServicio('${cat}', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-${color}-500 transition-colors">
-                        <input type="number" value="${s.precio}" onchange="cambiarServicio('${cat}', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-${color}-500 font-bold outline-none text-center">
+                        <input type="text" value="${esc(s.nombre)}" onchange="cambiarServicio('${cat}', ${i}, 'nombre', this.value)" class="bg-gray-700 p-2 rounded flex-1 text-sm border border-gray-600 outline-none focus:border-${color}-500 transition-colors">
+                        <input type="number" value="${esc(s.precio)}"onchange="cambiarServicio('${cat}', ${i}, 'precio', this.value)" class="bg-gray-700 p-2 rounded w-24 text-sm border border-gray-600 text-${color}-500 font-bold outline-none text-center">
                         <button onclick="eliminarServicio('${cat}', ${i})" class="bg-red-900/50 hover:bg-red-600 text-red-500 hover:text-white px-3 rounded transition-colors">✕</button>
                     </div>
                 `).join('');
@@ -485,10 +464,10 @@
                 document.getElementById(id).innerHTML = (lista || []).map((p, i) => `
                     <div class="bg-gray-700/30 p-3 rounded-2xl mb-3 flex items-center gap-3 border border-gray-600/50">
                         <div class="relative group">
-                            <img src="${p.foto}" class="w-12 h-12 rounded-full object-cover border-2 border-${color}-500">
+                            <img src="${esc(p.foto)}" class="w-12 h-12 rounded-full object-cover border-2 border-${color}-500">
                             <button id="btn-foto-${cat}-${i}" onclick="subirFotoEquipo('${cat}', ${i})" class="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs">📷</button>
                         </div>
-                        <input type="text" value="${p.nombre}" onchange="cambiarEquipo('${cat}', ${i}, 'nombre', this.value)" class="bg-transparent border-b border-gray-600 text-sm outline-none focus:border-${color}-500 flex-1">
+                        <input type="text" value="${esc(p.nombre)}" onchange="cambiarEquipo('${cat}', ${i}, 'nombre', this.value)" class="bg-transparent border-b border-gray-600 text-sm outline-none focus:border-${color}-500 flex-1">
                         <button onclick="eliminarMiembro('${cat}', ${i})" class="text-red-500 text-xs">✕</button>
                     </div>
                 `).join('');
@@ -503,14 +482,14 @@
                     return `
                     <div class="mb-4 p-3 border border-gray-700 rounded-xl bg-gray-900/50">
                         <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
-                            <span class="text-xs font-bold text-gray-200">👤 ${p.nombre}</span>
+                            <span class="text-xs font-bold text-gray-200">👤 ${esc(p.nombre)}</span>
                             <div class="flex gap-2">
                                 <input type="date" id="date-${cat}-${i}" class="bg-gray-800 text-[10px] p-1 rounded border border-gray-600">
                                 <button onclick="agregarDescanso('${cat}', ${i})" class="bg-${color}-600/20 text-${color}-500 text-[10px] px-2 py-1 rounded font-bold">+ DÍA</button>
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-1">
-                            ${desc.map((d, j) => `<span class="bg-gray-800 border border-gray-600 text-${color}-400 text-[9px] px-2 py-0.5 rounded flex items-center gap-1">${d.split('-').reverse().join('/')} <button onclick="eliminarDescanso('${cat}', ${i}, ${j})" class="text-red-500">×</button></span>`).join('')}
+                            ${desc.map((d, j) => `<span class="bg-gray-800 border border-gray-600 text-${color}-400 text-[9px] px-2 py-0.5 rounded flex items-center gap-1">${esc(String(d).split('-').reverse().join('/'))} <button onclick="eliminarDescanso('${cat}', ${i}, ${j})" class="text-red-500">×</button></span>`).join('')}
                         </div>
                     </div>`;
                 }).join('');
@@ -589,26 +568,6 @@
             data.equipo[cat][indexProf].descansos.splice(indexDesc, 1);
             await setDoc(docRef, data);
         };
-
-        // Función original de gráfica mantenida para compatibilidad 
-        let chart;
-        function actualizarEstadisticas(stats) {
-            const ctx = document.getElementById('ventasChart').getContext('2d');
-            if(chart) chart.destroy();
-            chart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Barbería', 'Uñas', 'Miradas'],
-                    datasets: [{
-                        data: [stats.barberia, stats.unas, stats.cejas],
-                        backgroundColor: ['#eab308', '#ec4899', '#a855f7'],
-                        borderColor: '#111827',
-                        borderWidth: 4
-                    }]
-                },
-                options: { plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 10 } } } } }
-            });
-        }
     </script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
@@ -649,50 +608,28 @@
         <main class="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full pb-20">
             <div id="sec-dashboard" class="admin-page space-y-6">
                 <div class="flex items-center gap-3 border-b border-gray-700 pb-4">
-                    <span class="text-3xl bg-gray-800 p-2 rounded-xl border border-gray-700">📊</span>
+                    <span class="text-3xl bg-gray-800 p-2 rounded-xl border border-gray-700">📋</span>
                     <div>
-                        <h2 class="text-2xl font-bold tracking-tight text-white">Dashboard en Tiempo Real</h2>
-                        <p class="text-gray-500 text-xs mt-1">Monitoreo de ingresos estimados, equipo y registro de citas recientes.</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-gray-800 border-l-4 border-green-500 p-6 rounded-xl shadow-lg hover:scale-105 transition-transform">
-                        <p class="text-gray-400 text-[10px] font-bold tracking-widest uppercase mb-1">Ingresos Estimados (Mes)</p>
-                        <p class="text-3xl font-bold text-white" id="kpi-ingresos">$0</p>
-                    </div>
-                    <div class="bg-gray-800 border-l-4 border-yellow-500 p-6 rounded-xl shadow-lg hover:scale-105 transition-transform">
-                        <p class="text-gray-400 text-[10px] font-bold tracking-widest uppercase mb-1">Citas para Hoy</p>
-                        <p class="text-3xl font-bold text-white" id="kpi-hoy">0</p>
-                    </div>
-                    <div class="bg-gray-800 border-l-4 border-purple-500 p-6 rounded-xl shadow-lg hover:scale-105 transition-transform">
-                        <p class="text-gray-400 text-[10px] font-bold tracking-widest uppercase mb-1">Reprogramadas Total</p>
-                        <p class="text-3xl font-bold text-white" id="kpi-reprogramadas">0</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg flex flex-col">
-                        <h3 class="text-gray-300 text-sm font-bold tracking-widest uppercase mb-4 text-center">Desempeño por Profesional</h3>
-                        <div class="relative w-full max-w-full aspect-square md:aspect-video overflow-hidden flex-1">
-                            <canvas id="chart-equipo"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg flex flex-col">
-                        <h3 class="text-gray-300 text-sm font-bold tracking-widest uppercase mb-4 text-center">Citas por Servicio</h3>
-                        <div class="relative w-full max-w-full aspect-square md:aspect-video overflow-hidden flex-1">
-                            <canvas id="chart-servicios"></canvas>
-                        </div>
+                        <h2 class="text-2xl font-bold tracking-tight text-white">Registro de Citas</h2>
+                        <p class="text-gray-500 text-xs mt-1">Historial completo de todas las reservas de tus clientes.</p>
                     </div>
                 </div>
 
                 <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg mt-6">
-                    <h3 class="text-gray-300 text-sm font-bold tracking-widest uppercase mb-4">Registro Histórico de Citas</h3>
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 class="text-gray-300 text-sm font-bold tracking-widest uppercase">Histórico de Citas</h3>
+                        
+                        <div class="relative w-full md:w-72">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">🔍</span>
+                            <input type="text" id="buscador-citas" onkeyup="window.filtrarCitas()" placeholder="Buscar por nombre, cel o ID..." class="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block pl-10 p-2.5 outline-none transition-colors">
+                        </div>
+                    </div>
+
                     <div class="overflow-x-auto custom-scroll">
                         <table class="w-full text-left text-sm text-gray-400 whitespace-nowrap">
                             <thead class="text-xs text-gray-500 uppercase bg-gray-900 border-b border-gray-700">
                                 <tr>
-                                    <th class="px-4 py-3">Fecha</th>
+                                    <th class="px-4 py-3">Fecha / ID</th>
                                     <th class="px-4 py-3">Cliente</th>
                                     <th class="px-4 py-3">Servicio</th>
                                     <th class="px-4 py-3">Profesional</th>
@@ -711,9 +648,6 @@
                     <div>
                         <h2 class="text-2xl font-bold">Servicios y Precios</h2>
                         <p class="text-gray-500 text-xs">Administra los precios de tu negocio. Se guardan automáticamente al escribir.</p>
-                    </div>
-                    <div class="w-32 h-32 hidden md:block">
-                        <canvas id="ventasChart"></canvas>
                     </div>
                 </div>
                 

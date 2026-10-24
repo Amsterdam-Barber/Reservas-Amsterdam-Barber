@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para Amsterdam Barber Club.
+// Publicar en: Consola de Firebase → Firestore Database → Reglas → pegar → Publicar.
+//
+// El correo de esAdmin() debe ser exactamente el de la cuenta con la que entras al panel
+// (admin.html), tal como aparece en Authentication → Users. Si no coincide, el panel no
+// podrá ver las citas ni guardar cambios.
+// Además, en Authentication → Settings → "User actions", desactiva la creación de cuentas
+// para que nadie pueda registrarse por su cuenta.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esAdmin() {
+      return request.auth != null
+        && request.auth.token.email in ['crltsslv@gmail.com'];
+    }
+
+    // ID del turno: igual que idTurno() en index.html, reprogramar.html y admin.html
+    function idTurno(profesional, fecha, hora) {
+      return (profesional + '__' + fecha + '__' + hora).replace('[^a-zA-Z0-9_-]', '_');
+    }
+
+    function textoValido(valor, min, max) {
+      return valor is string && valor.size() >= min && valor.size() <= max;
+    }
+
+    function fechaValida(valor) {
+      return valor is string && valor.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function horaValida(valor) {
+      return valor is string && valor.matches('^[0-9]{2}:[0-9]{2} (AM|PM)$');
+    }
+
+    // Precios, equipo, galerías y video: todos lo leen, solo el admin lo cambia
+    match /configuracion/{docId} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    // Citas: los datos personales del cliente viven aquí
+    match /reservas/{reservaId} {
+      // reprogramar.html abre una cita por su código secreto; nadie puede listarlas salvo el admin
+      allow get: if true;
+      allow list: if esAdmin();
+
+      // Una cita nueva debe venir junto con su turno en "ocupados" (misma transacción)
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['idCita', 'nombre', 'celular', 'servicio', 'profesional', 'fecha', 'hora', 'estado', 'timestamp'])
+                    && request.resource.data.idCita == reservaId
+                    && textoValido(request.resource.data.nombre, 1, 80)
+                    && textoValido(request.resource.data.celular, 7, 20)
+                    && textoValido(request.resource.data.servicio, 1, 300)
+                    && textoValido(request.resource.data.profesional, 1, 60)
+                    && fechaValida(request.resource.data.fecha)
+                    && horaValida(request.resource.data.hora)
+                    && request.resource.data.estado == 'confirmada'
+                    && request.resource.data.timestamp is string
+                    && existsAfter(/databases/$(database)/documents/ocupados/$(idTurno(
+                         request.resource.data.profesional, request.resource.data.fecha, request.resource.data.hora)));
+
+      // El cliente solo puede cambiar fecha y hora, y debe apartar el nuevo turno en la misma transacción
+      allow update: if esAdmin()
+                    || (request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['fecha', 'hora', 'estado', 'timestampActualizacion'])
+                        && request.resource.data.estado == 'reprogramada'
+                        && fechaValida(request.resource.data.fecha)
+                        && horaValida(request.resource.data.hora)
+                        && existsAfter(/databases/$(database)/documents/ocupados/$(idTurno(
+                             resource.data.profesional, request.resource.data.fecha, request.resource.data.hora))));
+
+      allow delete: if esAdmin();
+    }
+
+    // Horas apartadas por profesional. No contienen datos del cliente, por eso se pueden leer.
+    match /ocupados/{turnoId} {
+      allow read: if true;
+
+      // "create" falla si el turno ya existe: así dos personas no pueden tomar la misma hora
+      allow create: if request.resource.data.keys().hasOnly(['profesional', 'fecha', 'hora', 'creado'])
+                    && textoValido(request.resource.data.profesional, 1, 60)
+                    && fechaValida(request.resource.data.fecha)
+                    && horaValida(request.resource.data.hora)
+                    && turnoId == idTurno(request.resource.data.profesional, request.resource.data.fecha, request.resource.data.hora);
+      allow update: if esAdmin();
+
+      // Necesario para liberar la hora anterior al reprogramar. Limitación conocida: sin un
+      // servidor (Cloud Function) no se puede verificar quién libera el turno.
+      allow delete: if true;
+    }
+  }
+}
