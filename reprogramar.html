@@ -351,7 +351,7 @@
                     const radioDia = document.querySelector('input[name="r-date"]:checked');
                     if (radioDia) window.actualizarHoras(radioDia.value, parseInt(radioDia.getAttribute('data-dia-semana')));
                 } else {
-                    alert("Error al reprogramar. Intenta de nuevo.");
+                    alert(`Error al reprogramar. Intenta de nuevo. (código: ${error.code || error.message})`);
                 }
                 txtBtn.innerText = textoOriginal;
                 spinner.classList.add('hidden');

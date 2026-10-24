@@ -415,8 +415,8 @@
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-yellow-600 mb-16">
                 <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Barbería</h2>
                 <form id="formBarberia" class="space-y-4" onsubmit="enviarReserva(event, 'barberia')">
-                    <input type="text" id="nomB" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
-                    <input type="tel" id="telB" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                    <input type="text" id="nomB" required maxlength="80" placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
+                    <input type="tel" id="telB" required maxlength="20" inputmode="tel" placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-yellow-500 outline-none">
                     
                     <div class="relative custom-dropdown z-50">
                         <button type="button" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-left flex justify-between items-center outline-none focus:border-yellow-500" onclick="toggleDropdown('barberia')">
@@ -480,8 +480,8 @@
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-pink-600 mb-16">
                 <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Manicura & Pedicura</h2>
                 <form id="formUnas" class="space-y-4" onsubmit="enviarReserva(event, 'unas')">
-                    <input type="text" id="nomU" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
-                    <input type="tel" id="telU" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                    <input type="text" id="nomU" required maxlength="80" placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
+                    <input type="tel" id="telU" required maxlength="20" inputmode="tel" placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-pink-500 outline-none">
                     
                     <div class="relative custom-dropdown z-50">
                         <label class="block text-[10px] text-pink-400 mb-1 ml-1 uppercase font-bold tracking-widest">Servicio de Manos</label>
@@ -556,8 +556,8 @@
             <section class="max-w-md mx-auto p-6 bg-gray-800 rounded-xl shadow-2xl border border-purple-600 mb-16">
                 <h2 class="text-2xl font-bold text-center mb-6 text-white">Reserva Tu Cita</h2>
                 <form id="formCejas" class="space-y-4" onsubmit="enviarReserva(event, 'cejas')">
-                    <input type="text" id="nomC" required placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-purple-500 outline-none">
-                    <input type="tel" id="telC" required placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-purple-500 outline-none">
+                    <input type="text" id="nomC" required maxlength="80" placeholder="Tu Nombre" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-purple-500 outline-none">
+                    <input type="tel" id="telC" required maxlength="20" inputmode="tel" placeholder="Tu número de WhatsApp" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:border-purple-500 outline-none">
                     
                     <div class="relative custom-dropdown z-40">
                         <label class="block text-[10px] text-purple-400 mb-1 ml-1 uppercase font-bold tracking-widest">Servicio de Cejas</label>
@@ -887,8 +887,8 @@
 
             let datos = {
                 idCita: codigoCita,
-                nombre: document.getElementById(nomID).value,
-                celular: document.getElementById(telID).value,
+                nombre: document.getElementById(nomID).value.trim(),
+                celular: document.getElementById(telID).value.trim(),
                 servicio: "", 
                 profesional: document.querySelector(`input[name="${profName}"]:checked`)?.value,
                 fecha: document.getElementById(fechaID).value,
@@ -896,6 +896,21 @@
                 estado: "confirmada",
                 timestamp: new Date().toISOString()
             };
+
+            // Las mismas condiciones que exigen las reglas de Firestore, con un mensaje claro para el cliente
+            if (!datos.nombre) {
+                alert("Por favor escribe tu nombre.");
+                return;
+            }
+            const digitosCelular = datos.celular.replace(/\D/g, '');
+            if (digitosCelular.length < 7 || datos.celular.length > 20) {
+                alert("Por favor escribe un número de WhatsApp válido (por ejemplo 3001234567).");
+                return;
+            }
+            if (!datos.profesional || !datos.fecha || !datos.hora) {
+                alert("Por favor elige profesional, fecha y hora.");
+                return;
+            }
 
             if (tipo === 'cejas') {
                 const sCj = document.getElementById('servCj').value;
@@ -940,7 +955,7 @@
                     alert(`Lo sentimos, alguien acaba de reservar las ${datos.hora} con ${datos.profesional}. Por favor elige otra hora.`);
                     verificarDisponibilidad(tipo);
                 } else {
-                    alert("Error al guardar la cita. Revisa tu conexión e intenta de nuevo.");
+                    alert(`Error al guardar la cita. Revisa tus datos y tu conexión e intenta de nuevo. (código: ${error.code || error.message})`);
                 }
                 txtBtn.innerText = textoOriginal;
                 spinner.classList.add('hidden');
