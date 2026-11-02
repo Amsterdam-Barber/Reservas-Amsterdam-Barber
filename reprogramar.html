@@ -194,7 +194,7 @@
             const container = document.getElementById(`date-container`);
             container.innerHTML = htmlFechas.map(d => `
                 <label class="cursor-pointer flex-none snap-center group w-[72px]">
-                    <input type="radio" name="r-date" value="${d.dateStr}" data-dia-semana="${d.diaSemana}" class="peer sr-only" onchange="window.actualizarHoras('${d.dateStr}', ${d.diaSemana})">
+                    <input type="radio" name="r-date" value="${d.dateStr}" data-dia-semana="${d.diaSemana}" class="peer hidden" onchange="window.actualizarHoras('${d.dateStr}', ${d.diaSemana})">
                     <div class="px-2 py-3 bg-gray-800 border border-gray-600 rounded-xl peer-checked:bg-yellow-600/20 peer-checked:border-yellow-500 text-center transition-all duration-300">
                         <p class="text-[11px] text-gray-400 peer-checked:text-yellow-500 font-medium mb-1">${d.diaTexto}</p>
                         <p class="text-xl font-bold text-gray-200 peer-checked:text-white">${d.diaNum}</p>
@@ -238,21 +238,26 @@
 
             const ahora = new Date();
             const esHoy = (fechaStr === `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`);
-            const horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+            const defaultHorarios = window.horariosNegocio || {
+                "1": { abierto: "10:00", cerrado: "20:00" }, "2": { abierto: "10:00", cerrado: "20:00" },
+                "3": { abierto: "10:00", cerrado: "20:00" }, "4": { abierto: "10:00", cerrado: "20:00" },
+                "5": { abierto: "10:00", cerrado: "20:00" }, "6": { abierto: "09:30", cerrado: "20:00" },
+                "0": { abierto: "09:30", cerrado: "20:00" }
+            };
+            const horarioDia = defaultHorarios[String(diaSemana)];
+            const horaApertura = horarioDia ? horarioDia.abierto : "10:00";
+            const horaCierre = horarioDia ? horarioDia.cerrado : "20:00";
             
-            // LÓGICA DE 30 MINUTOS PARA UÑAS AL REPROGRAMAR
+            // Lógica original de intervalos (no afecta Reprogramar, pero debes mantenerla según el archivo)
             let intervaloMinutos = 15;
-            if (window.citaActual && window.citaActual.servicio) {
-                const s = window.citaActual.servicio.toLowerCase();
-                if (s.includes('manicura') || s.includes('pedicura') || s.includes('acrílicas') || s.includes('polygel') || s.includes('semipermanente') || s.includes('uñas') || s.includes('manos') || s.includes('pies')) {
-                    intervaloMinutos = 30;
-                }
-            }
-            
+            if (typeof tipo !== 'undefined' && tipo === 'unas') intervaloMinutos = 30; // Para index
+            if (window.citaActual && window.citaActual.servicio && /manicura|pedicura|acrílicas|polygel|semipermanente|uñas|manos|pies/i.test(window.citaActual.servicio)) intervaloMinutos = 30; // Para reprogramar
+
             let timeSlots = [];
             let [h, m] = horaApertura.split(':').map(Number);
+            const [hCierre, mCierre] = horaCierre.split(':').map(Number);
             
-            while (h < 20 || (h === 20 && m === 0)) {
+            while (h < hCierre || (h === hCierre && m <= mCierre)) {
                 const hora24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 const ampm = h >= 12 ? 'PM' : 'AM';
                 const h12 = h % 12 || 12;
@@ -283,7 +288,7 @@
                 container.className = "grid grid-cols-3 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto pr-2 custom-scroll"; 
                 container.innerHTML = timeSlots.map(t => `
                     <label class="cursor-pointer">
-                        <input type="radio" name="r-hour" value="${t}" class="peer sr-only" onchange="document.getElementById('nuevaHora').value = this.value">
+                        <input type="radio" name="r-hour" value="${t}" class="peer hidden" onchange="document.getElementById('nuevaHora').value = this.value">
                         <div class="py-2 text-center border border-gray-600 bg-gray-700 rounded-lg peer-checked:bg-yellow-600 peer-checked:border-yellow-500 peer-checked:text-white text-gray-300 font-medium text-xs transition-all hover:border-yellow-500 shadow-sm">
                             ${t}
                         </div>
@@ -396,7 +401,7 @@
                         btn.classList.remove('bg-green-500');
                         btn.classList.add('bg-yellow-600');
                     }, 2000);
-                }, 1500);
+                }, 800);
 
             } catch (error) {
                 // La cita ya quedó reprogramada en este punto; solo se restaura el botón

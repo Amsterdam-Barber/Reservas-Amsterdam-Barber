@@ -142,6 +142,7 @@
         onSnapshot(doc(db, "configuracion", "negocio"), (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.data();
+                window.horariosNegocio = data.horarios;
                 
                 // --- LÓGICA DE VIDEO CON AUTO-SCROLL, OVERLAY Y OBJECT-CONTAIN ---
                 const vidContainer = document.getElementById('bienvenida-visual');
@@ -242,7 +243,7 @@
                     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nombre || '')}&background=1f2937&color=${hexColor}&size=150`;
                     return `
                     <label class="cursor-pointer text-center group flex-none relative" onchange="verificarDisponibilidad('${tipo}')">
-                        <input type="radio" name="${nameInput}" value="${esc(p.nombre)}" data-descansos="${esc(JSON.stringify(p.descansos || []))}" required class="peer sr-only">
+                        <input type="radio" name="${nameInput}" value="${esc(p.nombre)}" data-descansos="${esc(JSON.stringify(p.descansos || []))}" required class="peer hidden">
 
                         <div class="relative w-16 h-16 md:w-20 md:h-20 mx-auto">
                             <img src="${esc(p.foto || avatarUrl)}" alt="${esc(p.nombre)}" data-fallback="${esc(avatarUrl)}" onerror="this.onerror=null; this.src=this.dataset.fallback;"
@@ -342,7 +343,7 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(75, 85, 99, 1); border-radius: 10px; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans relative overflow-x-hidden w-full">
+<body class="bg-gray-900 text-gray-100 font-sans overflow-x-hidden w-full max-w-[100vw] relative">
 
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center backdrop-blur-sm transition-opacity duration-300" onclick="cerrarLightbox(event)">
         <button id="lb-close" onclick="cerrarLightbox()" class="absolute top-6 right-6 text-5xl font-bold transition-transform hover:scale-110 z-[101]">×</button>
@@ -387,8 +388,8 @@
         <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h3 class="text-xl font-bold text-yellow-500 mb-4">⏰ Horarios de Atención</h3>
             <ul class="text-gray-300 space-y-2 mb-6">
-                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Lunes a Viernes:</span> <span class="text-yellow-500 font-semibold">10:00 AM - 8:00 PM</span></li>
-                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Sábados y Domingos:</span> <span class="text-yellow-500 font-semibold">9:30 AM - 8:00 PM</span></li>
+                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Lunes a Viernes:</span> <span class="text-yellow-500 font-semibold">10:30 AM - 8:00 PM</span></li>
+                <li class="flex justify-between border-b border-gray-700 pb-1"><span>Sábados y Domingos:</span> <span class="text-yellow-500 font-semibold">10:00 AM - 8:00 PM</span></li>
             </ul>
             <h3 class="text-xl font-bold text-yellow-500 mb-4">📱 Nuestras Redes</h3>
             <div class="flex flex-wrap gap-4">
@@ -680,7 +681,7 @@
                 if(container) {
                     container.innerHTML = htmlFechas.map(d => `
                         <label class="cursor-pointer flex-none snap-center group w-[72px]">
-                            <input type="radio" name="r-date-${v.tipo}" value="${d.dateStr}" data-dia-semana="${d.diaSemana}" class="peer sr-only" onchange="actualizarHoras('${d.dateStr}', '${v.tipo}', ${d.diaSemana})">
+                            <input type="radio" name="r-date-${v.tipo}" value="${d.dateStr}" data-dia-semana="${d.diaSemana}" class="peer hidden" onchange="actualizarHoras('${d.dateStr}', '${v.tipo}', ${d.diaSemana})">
                             <div class="px-2 py-3 bg-gray-800 border border-gray-600 rounded-xl ${v.theme.bg} ${v.theme.border} text-center transition-all duration-300">
                                 <p class="text-[11px] text-gray-400 ${v.theme.text} font-medium mb-1">${d.diaTexto}</p>
                                 <p class="text-xl font-bold text-gray-200 peer-checked:text-white">${d.diaNum}</p>
@@ -756,16 +757,26 @@
             const ahora = new Date();
             const esHoy = (fechaStr === `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`);
             
-            const horaApertura = (diaSemana === 0 || diaSemana === 6) ? "09:30" : "10:00";
+            const defaultHorarios = window.horariosNegocio || {
+                "1": { abierto: "10:00", cerrado: "20:00" }, "2": { abierto: "10:00", cerrado: "20:00" },
+                "3": { abierto: "10:00", cerrado: "20:00" }, "4": { abierto: "10:00", cerrado: "20:00" },
+                "5": { abierto: "10:00", cerrado: "20:00" }, "6": { abierto: "09:30", cerrado: "20:00" },
+                "0": { abierto: "09:30", cerrado: "20:00" }
+            };
+            const horarioDia = defaultHorarios[String(diaSemana)];
+            const horaApertura = horarioDia ? horarioDia.abierto : "10:00";
+            const horaCierre = horarioDia ? horarioDia.cerrado : "20:00";
             
-            // LÓGICA DE 30 MINUTOS PARA UÑAS
-            const esUnas = (tipo === 'unas');
-            const intervaloMinutos = esUnas ? 30 : 15;
+            // Lógica original de intervalos (no afecta Reprogramar, pero debes mantenerla según el archivo)
+            let intervaloMinutos = 15;
+            if (typeof tipo !== 'undefined' && tipo === 'unas') intervaloMinutos = 30; // Para index
+            if (window.citaActual && window.citaActual.servicio && /manicura|pedicura|acrílicas|polygel|semipermanente|uñas|manos|pies/i.test(window.citaActual.servicio)) intervaloMinutos = 30; // Para reprogramar
 
             let timeSlots = [];
             let [h, m] = horaApertura.split(':').map(Number);
+            const [hCierre, mCierre] = horaCierre.split(':').map(Number);
             
-            while (h < 20 || (h === 20 && m === 0)) {
+            while (h < hCierre || (h === hCierre && m <= mCierre)) {
                 const hora24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 const ampm = h >= 12 ? 'PM' : 'AM';
                 const h12 = h % 12 || 12;
@@ -796,7 +807,7 @@
                 container.className = "grid grid-cols-3 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto pr-2 custom-scroll"; 
                 container.innerHTML = timeSlots.map(t => `
                     <label class="cursor-pointer">
-                        <input type="radio" name="r-hour-${tipo}" value="${t}" class="peer sr-only" onchange="document.getElementById('hora${tipo.charAt(0).toUpperCase()}').value = this.value">
+                        <input type="radio" name="r-hour-${tipo}" value="${t}" class="peer hidden" onchange="document.getElementById('hora${tipo.charAt(0).toUpperCase()}').value = this.value">
                         <div class="py-2 text-center border border-gray-600 bg-gray-700 rounded-lg ${c.bg} ${c.border} peer-checked:text-white text-gray-300 font-medium text-xs transition-all ${c.hover} shadow-sm">
                             ${t}
                         </div>
@@ -964,9 +975,8 @@
             }
 
             try {
-                // El Apps Script registra la cita y envía el aviso por Telegram (el token vive allá, no en esta página).
-                // Si falla, la cita ya quedó guardada: no se muestra error para que el cliente no la duplique.
-                await fetch(WEB_APP_URL, {
+                // Modificado: Se quita el 'await' para que el webhook de Telegram se dispare en segundo plano sin pausar la pantalla.
+                fetch(WEB_APP_URL, {
                     method: 'POST', mode: 'no-cors',
                     body: JSON.stringify(datos), headers: { 'Content-Type': 'application/json' }
                 }).catch(err => console.error("Error notificando al Apps Script:", err));
@@ -1008,7 +1018,7 @@
                         if(tipo === 'unas') btn.classList.add('bg-pink-600');
                         if(tipo === 'cejas') btn.classList.add('bg-purple-600');
                     }, 2000);
-                }, 2500);
+                }, 800);
 
             } catch (error) {
                 // La cita ya está guardada en este punto; solo se restaura el botón

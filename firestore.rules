@@ -17,6 +17,13 @@ service cloud.firestore {
         && request.auth.token.email in ['crltsslv@gmail.com'];
     }
 
+    // Cuenta de la Agenda de citas: solo puede LEER las citas, no crearlas ni cambiarlas.
+    // La cuenta se crea a mano en Authentication → Users (el registro público está desactivado).
+    function esAgenda() {
+      return request.auth != null
+        && request.auth.token.email == 'agenda@amsterdam-barber-club.firebaseapp.com';
+    }
+
     // ID del turno: igual que idTurno() en index.html, reprogramar.html y admin.html
     function idTurno(profesional, fecha, hora) {
       return (profesional + '__' + fecha + '__' + hora).replace('[^a-zA-Z0-9_-]', '_');
@@ -42,9 +49,9 @@ service cloud.firestore {
 
     // Citas: los datos personales del cliente viven aquí
     match /reservas/{reservaId} {
-      // reprogramar.html abre una cita por su código secreto; nadie puede listarlas salvo el admin
+      // reprogramar.html abre una cita por su código secreto; solo el admin y la Agenda pueden listarlas
       allow get: if true;
-      allow list: if esAdmin();
+      allow list: if esAdmin() || esAgenda();
 
       // Una cita nueva debe venir junto con su turno en "ocupados" (misma transacción)
       allow create: if request.resource.data.keys().hasOnly(
