@@ -243,7 +243,7 @@
                     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nombre || '')}&background=1f2937&color=${hexColor}&size=150`;
                     return `
                     <label class="cursor-pointer text-center group flex-none relative" onchange="verificarDisponibilidad('${tipo}')">
-                        <input type="radio" name="${nameInput}" value="${esc(p.nombre)}" data-descansos="${esc(JSON.stringify(p.descansos || []))}" required class="peer hidden">
+                        <input type="radio" name="${nameInput}" value="${esc(p.nombre)}" data-descansos="${esc(JSON.stringify(p.descansos || []))}" data-descanso-semanal="${esc(JSON.stringify(p.descansoSemanal || []))}" required class="peer hidden">
 
                         <div class="relative w-16 h-16 md:w-20 md:h-20 mx-auto">
                             <img src="${esc(p.foto || avatarUrl)}" alt="${esc(p.nombre)}" data-fallback="${esc(avatarUrl)}" onerror="this.onerror=null; this.src=this.dataset.fallback;"
@@ -705,11 +705,13 @@
             
             let enDescanso = false;
             let nombreProf = "";
-            
+
             if (profSeleccionado) {
                 nombreProf = profSeleccionado.value;
+                // Descanso puntual (fecha exacta) o fijo semanal (día de la semana, 0 = domingo)
                 const descansos = JSON.parse(profSeleccionado.getAttribute('data-descansos') || '[]');
-                if (descansos.includes(fechaStr)) {
+                const descansoSemanal = JSON.parse(profSeleccionado.getAttribute('data-descanso-semanal') || '[]');
+                if (descansos.includes(fechaStr) || descansoSemanal.includes(diaSemana)) {
                     enDescanso = true;
                 }
             }
@@ -722,7 +724,7 @@
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
                         <span class="text-2xl block mb-2">🏖️</span>
                         <p class="text-gray-200 font-bold text-sm">${esc(nombreProf)} está de descanso</p>
-                        <p class="text-gray-400 text-xs mt-1">Este profesional no está disponible hoy. Elige otro día u otro profesional.</p>
+                        <p class="text-gray-400 text-xs mt-1">Este profesional no está disponible ese día. Elige otro día u otro profesional.</p>
                     </div>
                 `;
                 container.className = "grid grid-cols-1";
@@ -894,7 +896,11 @@
             let fechaID = tipo === 'barberia' ? 'fechaB' : (tipo === 'unas' ? 'fechaU' : 'fechaC');
             let horaID = tipo === 'barberia' ? 'horaB' : (tipo === 'unas' ? 'horaU' : 'horaC');
 
-            const codigoCita = Math.random().toString(36).substring(2, 8).toUpperCase();
+            // El ID es la llave para ver y reprogramar la cita: 8 caracteres con aleatorio criptográfico
+            // (Math.random es predecible y a veces daba IDs más cortos). Sin 0/O ni 1/I para que el
+            // cliente pueda copiarlo a mano en reprogramar.html sin confundirse.
+            const ALFABETO_ID = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            const codigoCita = Array.from(crypto.getRandomValues(new Uint8Array(8)), n => ALFABETO_ID[n % ALFABETO_ID.length]).join('');
 
             let datos = {
                 idCita: codigoCita,

@@ -334,7 +334,10 @@
 
         window.logout = () => signOut(auth);
 
-        window.cancelarCita = async (idReserva, profesional, fecha, hora) => {
+        window.cancelarCita = async (idReserva) => {
+            const cita = citasCargadas.find(r => r.id === idReserva);
+            if (!cita) { alert("No se encontró la cita. Recarga el panel e intenta de nuevo."); return; }
+            const { profesional, fecha, hora } = cita;
             if(!confirm(`⚠️ ¿Seguro que deseas cancelar la cita de las ${hora} el ${fecha}?\n\nAl confirmar, la hora quedará libre inmediatamente para que otro cliente la tome.`)) return;
             try {
                 // Liberar el turno
@@ -360,6 +363,7 @@
             onSnapshot(collection(db, "reservas"), (snapshot) => {
                 const reservas = [];
                 snapshot.forEach(doc => reservas.push({ id: doc.id, ...doc.data() }));
+                citasCargadas = reservas; // Para avisar si un descanso choca con citas ya agendadas
                 window.procesarDashboard(reservas); // 🔧 CORRECCIÓN 2
                 sincronizarTurnosOcupados(reservas);
             });
@@ -374,7 +378,8 @@
 
             const hoy = new Date();
             const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-            const futuras = reservas.filter(r => r.fecha >= hoyStr && r.hora && r.profesional);
+            // Las canceladas no: su hora ya se liberó y no debe volver a bloquearse
+            const futuras = reservas.filter(r => r.fecha >= hoyStr && r.hora && r.profesional && r.estado !== 'cancelada');
 
             const resultados = await Promise.allSettled(futuras.map(r =>
                 setDoc(doc(db, "ocupados", idTurno(r.profesional, r.fecha, r.hora)),
@@ -413,9 +418,11 @@
                 let cancelBtn = '';
 
                 if(r.fecha && r.timestamp && r.estado !== 'cancelada') {
-                    const hoyStr = new Date().toISOString().split('T')[0];
+                    // Fecha local (toISOString da la fecha en UTC: después de las 7 p. m. ya era "mañana")
+                    const hoyStr = fechaHoyLocal();
                     if (r.fecha >= hoyStr) {
-                        cancelBtn = `<button onclick="cancelarCita('${r.id}', '${r.profesional}', '${r.fecha}', '${r.hora}')" class="ml-2 bg-red-900/40 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 px-2 py-1 rounded-md text-[10px] font-bold transition shadow-sm inline-flex items-center gap-1" title="Liberar esta hora"><span class="text-xs">✕</span> Cancelar</button>`;
+                        // Solo el ID va al botón, como dato escapado: los datos de la cita los escribe el cliente
+                        cancelBtn = `<button data-id="${esc(r.id)}" onclick="cancelarCita(this.dataset.id)" class="ml-2 bg-red-900/40 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 px-2 py-1 rounded-md text-[10px] font-bold transition shadow-sm inline-flex items-center gap-1" title="Liberar esta hora"><span class="text-xs">✕</span> Cancelar</button>`;
                     }
 
                     // Lógica original del recordatorio...
@@ -493,22 +500,34 @@
             renderEquipo('equipo-unas', data.equipo.unas, 'unas', 'pink');
             renderEquipo('equipo-cejas', data.equipo.cejas, 'cejas', 'purple');
 
+            // Descanso fijo semanal (botones L M X J V S D) + días puntuales (permisos, vacaciones).
+            // Los días puntuales que ya pasaron no se muestran y se limpian al guardar.
             const renderDescansos = (id, lista, cat, color) => {
+                const hoy = fechaHoyLocal();
                 document.getElementById(id).innerHTML = (lista || []).map((p, i) => {
-                    const desc = p.descansos || [];
-                    desc.sort(); // Mantener orden cronológico
+                    const semanal = diasSemanalesValidos(p.descansoSemanal);
+                    const puntuales = (p.descansos || []).filter(d => FORMATO_FECHA.test(d) && d >= hoy).sort();
+                    const botonesSemana = DIAS_SEMANA.map(d => {
+                        const activo = semanal.includes(d.num);
+                        return `<button type="button" onclick="alternarDescansoSemanal('${cat}', ${i}, ${d.num})" title="${d.nombre}" aria-pressed="${activo}"
+                            class="h-9 w-full rounded-lg text-sm font-bold border transition-colors ${activo ? `bg-${color}-600 border-${color}-500 text-white` : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400'}">${d.letra}</button>`;
+                    }).join('');
+                    const textoSemanal = semanal.length === 0
+                        ? 'Trabaja todos los días de la semana'
+                        : 'Descansa: ' + DIAS_SEMANA.filter(d => semanal.includes(d.num)).map(d => d.nombre.toLowerCase()).join(', ');
                     return `
                     <div class="mb-4 p-4 border border-gray-700 rounded-xl bg-gray-900/50 shadow-sm transition-all">
-                        <div class="flex flex-col md:flex-row md:justify-between items-start md:items-center mb-4 gap-3 border-b border-gray-700 pb-3">
-                            <span class="text-sm font-bold text-gray-200">👤 ${esc(p.nombre)}</span>
-                            <div class="flex flex-col w-full md:w-auto text-left md:text-right">
-                                <label class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Añadir día libre automático</label>
-                                <input type="date" onchange="agregarDescanso('${cat}', ${i}, this.value)" class="bg-gray-800 text-xs p-2 rounded-lg border border-gray-600 focus:border-${color}-500 outline-none text-gray-300 cursor-pointer shadow-inner w-full">
-                            </div>
-                        </div>
+                        <p class="text-sm font-bold text-gray-200 mb-3 border-b border-gray-700 pb-2">👤 ${esc(p.nombre)}</p>
+
+                        <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Descanso fijo cada semana</p>
+                        <div class="grid grid-cols-7 gap-1 mb-1">${botonesSemana}</div>
+                        <p class="text-[11px] text-gray-400 mb-4">${textoSemanal}</p>
+
+                        <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Días puntuales (permiso, vacaciones)</p>
+                        <input type="date" min="${hoy}" onchange="agregarDescanso('${cat}', ${i}, this.value)" class="bg-gray-800 text-xs p-2 rounded-lg border border-gray-600 focus:border-${color}-500 outline-none text-gray-300 cursor-pointer shadow-inner w-full mb-2">
                         <div class="flex flex-wrap gap-2">
-                            ${desc.length === 0 ? `<span class="text-xs text-gray-500 italic w-full p-1 border border-dashed border-gray-700 rounded-lg text-center">Trabaja todos los días</span>` : 
-                            desc.map((d, j) => `<span class="bg-gray-800 border border-gray-600 text-${color}-400 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">${esc(String(d).split('-').reverse().join('/'))} <button onclick="eliminarDescanso('${cat}', ${i}, ${j})" class="text-red-500 hover:text-red-400 font-bold text-lg leading-none transition-transform hover:scale-125 mb-0.5">×</button></span>`).join('')}
+                            ${puntuales.length === 0 ? `<span class="text-xs text-gray-500 italic">Sin días puntuales</span>` :
+                            puntuales.map(d => `<span class="bg-gray-800 border border-gray-600 text-${color}-400 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">${esc(String(d).split('-').reverse().join('/'))} <button onclick="eliminarDescanso('${cat}', ${i}, '${esc(d)}')" class="text-red-500 hover:text-red-400 font-bold text-lg leading-none transition-transform hover:scale-125 mb-0.5">×</button></span>`).join('')}
                         </div>
                     </div>`;
                 }).join('');
@@ -568,23 +587,81 @@
             data.equipo[cat].splice(index, 1);
             await setDoc(docRef, data);
         };
-        window.agregarDescanso = async (cat, index, dateVal) => {
-            if(!dateVal) return;
-            const docRef = doc(db, "configuracion", "negocio");
-            const snap = await getDoc(docRef);
-            const data = snap.data();
-            if(!data.equipo[cat][index].descansos) data.equipo[cat][index].descansos = [];
-            if(!data.equipo[cat][index].descansos.includes(dateVal)) {
-                data.equipo[cat][index].descansos.push(dateVal);
-                data.equipo[cat][index].descansos.sort();
-                await setDoc(docRef, data);
-            }
+        // --- DÍAS DE DESCANSO ---
+        // descansoSemanal: números de getDay() (0 = domingo … 6 = sábado), igual que "horarios".
+        // descansos: fechas puntuales "AAAA-MM-DD". index.html y reprogramar.html leen ambos campos.
+        const DIAS_SEMANA = [
+            { num: 1, letra: 'L', nombre: 'Lunes' }, { num: 2, letra: 'M', nombre: 'Martes' },
+            { num: 3, letra: 'X', nombre: 'Miércoles' }, { num: 4, letra: 'J', nombre: 'Jueves' },
+            { num: 5, letra: 'V', nombre: 'Viernes' }, { num: 6, letra: 'S', nombre: 'Sábado' },
+            { num: 0, letra: 'D', nombre: 'Domingo' }
+        ];
+        const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+        let citasCargadas = [];
+
+        const fechaHoyLocal = () => {
+            const h = new Date();
+            return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
         };
-        window.eliminarDescanso = async (cat, indexProf, indexDesc) => {
+        const diasSemanalesValidos = (lista) =>
+            [...new Set((Array.isArray(lista) ? lista : []).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))];
+        const diaSemanaDeFecha = (fecha) => {
+            const [y, m, d] = fecha.split('-').map(Number);
+            return new Date(y, m - 1, d).getDay();
+        };
+        // Citas desde hoy del profesional que cumplen la condición (no se cancelan solas)
+        const citasFuturasDe = (nombre, condicion) => {
+            const hoy = fechaHoyLocal();
+            return citasCargadas.filter(r => r.profesional === nombre && r.estado !== 'cancelada'
+                && FORMATO_FECHA.test(r.fecha || '') && r.fecha >= hoy && condicion(r));
+        };
+        const avisoCitas = (citas) =>
+            `\n\n⚠️ Ya tiene ${citas.length} cita(s) agendada(s) en esos días:\n` +
+            citas.slice(0, 5).map(r => `• ${r.fecha} ${r.hora || ''} - ${r.nombre || ''}`).join('\n') +
+            (citas.length > 5 ? `\n• … y ${citas.length - 5} más` : '') +
+            `\n\nEsas citas NO se cancelan solas: avísale a esos clientes.`;
+
+        window.alternarDescansoSemanal = async (cat, index, dia) => {
+            if (!Number.isInteger(dia) || dia < 0 || dia > 6) return;
             const docRef = doc(db, "configuracion", "negocio");
             const snap = await getDoc(docRef);
             const data = snap.data();
-            data.equipo[cat][indexProf].descansos.splice(indexDesc, 1);
+            const prof = data.equipo[cat][index];
+            const semanal = diasSemanalesValidos(prof.descansoSemanal);
+            const nombreDia = DIAS_SEMANA.find(d => d.num === dia).nombre.toLowerCase();
+
+            if (semanal.includes(dia)) {
+                prof.descansoSemanal = semanal.filter(d => d !== dia);
+            } else {
+                const choques = citasFuturasDe(prof.nombre, r => diaSemanaDeFecha(r.fecha) === dia);
+                const mensaje = `¿${prof.nombre} descansa todos los ${nombreDia}?` + (choques.length ? avisoCitas(choques) : '');
+                if (!confirm(mensaje)) return;
+                prof.descansoSemanal = [...semanal, dia].sort();
+            }
+            await setDoc(docRef, data);
+        };
+        window.agregarDescanso = async (cat, index, dateVal) => {
+            if (!FORMATO_FECHA.test(dateVal || '')) return;
+            if (dateVal < fechaHoyLocal()) { alert("Esa fecha ya pasó. Elige hoy o un día futuro."); return; }
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            const prof = data.equipo[cat][index];
+            const vigentes = (prof.descansos || []).filter(d => FORMATO_FECHA.test(d) && d >= fechaHoyLocal());
+            if (vigentes.includes(dateVal)) return;
+
+            const choques = citasFuturasDe(prof.nombre, r => r.fecha === dateVal);
+            if (choques.length && !confirm(`¿Marcar el ${dateVal.split('-').reverse().join('/')} como descanso de ${prof.nombre}?` + avisoCitas(choques))) return;
+
+            prof.descansos = [...vigentes, dateVal].sort(); // de paso se limpian las fechas pasadas
+            await setDoc(docRef, data);
+        };
+        window.eliminarDescanso = async (cat, indexProf, fecha) => {
+            const docRef = doc(db, "configuracion", "negocio");
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            const prof = data.equipo[cat][indexProf];
+            prof.descansos = (prof.descansos || []).filter(d => d !== fecha && FORMATO_FECHA.test(d) && d >= fechaHoyLocal());
             await setDoc(docRef, data);
         };
         const defaultHorarios = {
@@ -632,10 +709,11 @@
 
     <div id="login-section" class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-gray-800 p-8 rounded-3xl border border-yellow-600/20 w-full max-w-md text-center shadow-2xl">
-            <h1 class="text-2xl font-bold text-yellow-500 mb-8 tracking-tighter">AMSTERDAM ADMIN</h1>
+            <h1 class="text-2xl font-bold text-yellow-500 mb-8 tracking-tighter"><a href="index.html" class="hover:text-yellow-400 transition-colors" title="Ir a la página de reservas">AMSTERDAM ADMIN</a></h1>
             <input type="email" id="email" placeholder="Correo" class="w-full p-4 bg-gray-900 rounded-xl mb-4 outline-none border border-transparent focus:border-yellow-500">
             <input type="password" id="pass" placeholder="Contraseña" class="w-full p-4 bg-gray-900 rounded-xl mb-6 outline-none border border-transparent focus:border-yellow-500">
             <button onclick="login()" class="w-full bg-yellow-600 py-4 rounded-xl font-bold text-gray-900 hover:bg-yellow-500 transition-colors">Entrar al Panel</button>
+            <a href="index.html" class="inline-block mt-6 text-xs text-gray-400 hover:text-yellow-500 transition-colors">← Volver a la página de reservas</a>
         </div>
     </div>
 
@@ -643,7 +721,7 @@
         <header class="bg-gray-800/80 backdrop-blur-md border-b border-gray-700 p-4 sticky top-0 z-40 flex justify-between items-center">
             <div class="flex items-center gap-4">
                 <button onclick="toggleMenu(true)" class="text-2xl p-2 hover:bg-gray-700 rounded-lg">☰</button>
-                <h1 class="font-bold text-lg tracking-tight">Amsterdam <span class="text-yellow-500">Club</span></h1>
+                <h1 class="font-bold text-lg tracking-tight"><a href="index.html" class="hover:opacity-80 transition-opacity" title="Ir a la página de reservas">Amsterdam <span class="text-yellow-500">Barber Club</span></a></h1>
             </div>
             <button onclick="logout()" class="text-[10px] font-bold text-red-500 border border-red-500/20 px-3 py-1 rounded-full hover:bg-red-500 hover:text-white transition-all">SALIR</button>
         </header>
@@ -659,7 +737,7 @@
                 <button onclick="showSection('sec-equipo')" class="w-full text-left p-4 hover:bg-blue-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>👥</span> Gestión de Equipo</button>
                 <button onclick="showSection('sec-multimedia')" class="w-full text-left p-4 hover:bg-indigo-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>🎬</span> Multimedia (Video)</button>
                 <button onclick="showSection('sec-galerias')" class="w-full text-left p-4 hover:bg-orange-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>🖼️</span> Galerías de Fotos</button>
-                <button onclick="showSection('sec-descansos')" class="w-full text-left p-4 hover:bg-green-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>📅</span> Calendario Libres</button>
+                <button onclick="showSection('sec-descansos')" class="w-full text-left p-4 hover:bg-green-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>📅</span> Días de Descanso</button>
                 <button onclick="showSection('sec-horarios')" class="w-full text-left p-4 hover:bg-red-500/10 rounded-xl flex items-center gap-3 transition-colors"><span>⏰</span> Horarios de Atención</button>
             </nav>
         </div>
@@ -840,7 +918,10 @@
             </div>
 
             <div id="sec-descansos" class="admin-page hidden space-y-6">
-                <h2 class="text-2xl font-bold">Días de Descanso</h2>
+                <div>
+                    <h2 class="text-2xl font-bold">Días de Descanso</h2>
+                    <p class="text-gray-500 text-xs mt-1">Toca la letra del día que descansa cada semana (L M X J V S D). Para un permiso o vacaciones, agrega la fecha en "Días puntuales": se borra sola cuando pasa.</p>
+                </div>
                 <div class="grid md:grid-cols-3 gap-6">
                     <div><h3 class="text-yellow-500 font-bold mb-4 text-xs">Barbería</h3><div id="desc-barberia"></div></div>
                     <div><h3 class="text-pink-500 font-bold mb-4 text-xs">Uñas</h3><div id="desc-unas"></div></div>

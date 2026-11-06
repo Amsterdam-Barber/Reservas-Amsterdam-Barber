@@ -30,13 +30,23 @@
             <p class="text-gray-400 animate-pulse font-medium">Buscando tu cita...</p>
         </div>
 
-        <div id="ui-error" class="hidden flex-col items-center justify-center py-12 text-center">
-            <span class="text-6xl mb-4">🕵️‍♂️</span>
-            <h2 class="text-2xl font-bold text-red-500 mb-2">Cita no encontrada</h2>
-            <p class="text-gray-400 mb-6 text-sm" id="error-msg">El enlace parece estar roto o la cita ya no existe.</p>
-            <a href="index.html" class="bg-gray-800 border border-yellow-600 text-yellow-500 hover:bg-yellow-600 hover:text-white px-6 py-3 rounded-lg font-bold transition-colors">
-                Volver al inicio
-            </a>
+        <!-- Buscador: se muestra si el enlace no trae ID, si la cita no existe o si el cliente quiere buscar otra -->
+        <div id="ui-buscar" class="hidden bg-gray-800 p-6 rounded-xl border border-yellow-600 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-1 text-center">🔎 Busca tu cita</h2>
+            <p class="text-gray-400 text-xs text-center mb-5">Escribe el <span class="text-yellow-500 font-bold">ID de la cita</span> que aparece en tu mensaje de WhatsApp de confirmación.</p>
+
+            <p id="buscar-msg" class="hidden text-sm text-red-400 bg-red-900/20 border border-red-900/50 rounded-lg p-3 mb-4 text-center"></p>
+
+            <form id="formBuscar" class="space-y-3" onsubmit="window.buscarCita(event)" autocomplete="off">
+                <label for="input-id" class="sr-only">ID de la cita</label>
+                <input type="text" id="input-id" required maxlength="20" placeholder="Ej: K7M2QX9A" autocapitalize="characters" spellcheck="false"
+                       class="w-full p-4 rounded-lg bg-gray-700 border border-gray-600 text-white text-center text-lg font-bold tracking-[0.3em] uppercase focus:border-yellow-500 outline-none">
+                <button type="submit" id="btn-buscar" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-lg transition duration-300 shadow-lg">Buscar cita</button>
+            </form>
+
+            <div class="text-center mt-5">
+                <a href="index.html" class="text-xs text-gray-400 hover:text-yellow-500 transition-colors">← Volver a la página de reservas</a>
+            </div>
         </div>
 
         <div id="ui-form" class="hidden bg-gray-800 p-6 rounded-xl border border-yellow-600 shadow-2xl">
@@ -72,6 +82,10 @@
                     <svg class="animate-spin h-5 w-5 text-gray-900 hidden loader-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 </button>
             </form>
+
+            <div class="text-center mt-5">
+                <button type="button" onclick="window.mostrarBuscador('')" class="text-xs text-gray-400 hover:text-yellow-500 transition-colors">¿No es tu cita? Buscar otra</button>
+            </div>
         </div>
     </main>
 
@@ -106,33 +120,83 @@
         window.citaActual = null;
         window.docIdFirestore = null;
         window.descansosProf = [];
+        window.descansoSemanalProf = []; // días de la semana (0 = domingo) en que descansa
+
+        // El ID es la única "llave" de la cita: solo se aceptan letras y números, así un texto raro
+        // (por ejemplo con "/") nunca llega a armar otra ruta de la base de datos.
+        const FORMATO_ID = /^[A-Za-z0-9]{4,30}$/;
 
         window.addEventListener('load', async () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const idCita = urlParams.get('id');
+            const idCita = (urlParams.get('id') || '').trim();
 
             if (!idCita) {
-                mostrarError("Falta el ID de la cita en el enlace.");
+                mostrarBuscador('');
+                return;
+            }
+            if (!FORMATO_ID.test(idCita)) {
+                mostrarBuscador("El enlace no tiene un ID de cita válido. Escríbelo aquí abajo.");
                 return;
             }
 
             await cargarCita(idCita);
         });
 
+        // Búsqueda manual: los ID se muestran en mayúsculas en WhatsApp; se ignoran espacios, "#" y guiones
+        window.buscarCita = async function(e) {
+            e.preventDefault();
+            const input = document.getElementById('input-id');
+            const id = input.value.replace(/[\s#-]/g, '').toUpperCase();
+            if (!FORMATO_ID.test(id)) {
+                mostrarBuscador("El ID solo tiene letras y números. Revisa tu mensaje de confirmación.");
+                return;
+            }
+            const btn = document.getElementById('btn-buscar');
+            btn.disabled = true;
+            btn.innerText = "Buscando...";
+            await cargarCita(id);
+            btn.disabled = false;
+            btn.innerText = "Buscar cita";
+        };
+
         async function cargarCita(id) {
+            // Limpia lo de una búsqueda anterior para no mezclar descansos ni horas de otra cita
+            consultaHoras++;
+            window.citaActual = null;
+            window.docIdFirestore = null;
+            window.descansosProf = [];
+            window.descansoSemanalProf = [];
+            document.getElementById('nuevaFecha').value = '';
+            document.getElementById('nuevaHora').value = '';
+            const contenedorHoras = document.getElementById('hours-container');
+            contenedorHoras.className = "grid grid-cols-1";
+            contenedorHoras.innerHTML = `<p class="text-center text-gray-500 text-xs bg-gray-900/50 p-3 rounded-lg">Por favor, elige un día arriba para ver las horas disponibles.</p>`;
+            document.getElementById('ui-buscar').classList.add('hidden');
+            document.getElementById('ui-form').classList.add('hidden');
+            document.getElementById('ui-loading').classList.remove('hidden');
+
             try {
                 // 1. Buscar la cita directa por su ID secreto (Sin hacer búsquedas generales)
                 const docRef = doc(db, "reservas", id);
                 const docSnap = await getDoc(docRef);
 
                 if (!docSnap.exists()) {
-                    mostrarError("No pudimos encontrar tu cita. Verifica el enlace o contacta soporte.");
+                    mostrarBuscador("No encontramos una cita con ese ID. Revisa que esté bien escrito o escríbenos por WhatsApp.");
                     return;
                 }
 
+                const cita = docSnap.data();
+                if (cita.estado === 'cancelada') {
+                    mostrarBuscador("Esta cita fue cancelada. Si quieres una nueva, agéndala desde la página de reservas.");
+                    return;
+                }
+
+                // Deja el ID en la dirección para que al recargar la página no se pierda
+                history.replaceState(null, '', `?id=${encodeURIComponent(docSnap.id)}`);
+
                 // Guardar la data
-                window.docIdFirestore = docSnap.id; 
-                window.citaActual = docSnap.data();
+                window.docIdFirestore = docSnap.id;
+                window.citaActual = cita;
 
                 // Pintar los datos en el resumen
                 document.getElementById('res-nombre').innerText = window.citaActual.nombre;
@@ -154,6 +218,9 @@
                     if (elProf && elProf.descansos) {
                         window.descansosProf = elProf.descansos;
                     }
+                    if (elProf && Array.isArray(elProf.descansoSemanal)) {
+                        window.descansoSemanalProf = elProf.descansoSemanal;
+                    }
                 }
 
                 // 3. Preparar la UI para reprogramar
@@ -163,18 +230,21 @@
 
             } catch (error) {
                 console.error("Error al cargar datos:", error);
-                mostrarError("Hubo un error de conexión al cargar tu cita.");
+                mostrarBuscador("Hubo un error de conexión al buscar tu cita. Intenta de nuevo.");
             }
         }
 
-        function mostrarError(mensaje) {
+        // Muestra el buscador; si hay mensaje (cita no encontrada, ID inválido…) lo pone arriba como texto
+        window.mostrarBuscador = function(mensaje) {
             document.getElementById('ui-loading').classList.add('hidden');
             document.getElementById('ui-form').classList.add('hidden');
-            const errorDiv = document.getElementById('ui-error');
-            errorDiv.classList.remove('hidden');
-            errorDiv.classList.add('flex');
-            document.getElementById('error-msg').innerText = mensaje;
-        }
+            document.getElementById('ui-buscar').classList.remove('hidden');
+            const msg = document.getElementById('buscar-msg');
+            msg.innerText = mensaje || '';
+            msg.classList.toggle('hidden', !mensaje);
+            document.getElementById('input-id').focus();
+        };
+        const mostrarBuscador = window.mostrarBuscador;
 
         function generarFechas() {
             const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -210,7 +280,7 @@
             const container = document.getElementById(`hours-container`);
             document.getElementById('nuevaHora').value = ""; 
 
-            if (window.descansosProf.includes(fechaStr)) {
+            if (window.descansosProf.includes(fechaStr) || window.descansoSemanalProf.includes(diaSemana)) {
                 container.innerHTML = `
                     <div class="col-span-full p-4 rounded-xl bg-gray-800 border border-red-900/50 text-center shadow-inner">
                         <span class="text-2xl block mb-2">🏖️</span>

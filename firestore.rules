@@ -68,9 +68,11 @@ service cloud.firestore {
                     && existsAfter(/databases/$(database)/documents/ocupados/$(idTurno(
                          request.resource.data.profesional, request.resource.data.fecha, request.resource.data.hora)));
 
-      // El cliente solo puede cambiar fecha y hora, y debe apartar el nuevo turno en la misma transacción
+      // El cliente solo puede cambiar fecha y hora, y debe apartar el nuevo turno en la misma transacción.
+      // Una cita cancelada por el negocio no se puede reprogramar (solo el admin puede tocarla).
       allow update: if esAdmin()
-                    || (request.resource.data.diff(resource.data).affectedKeys()
+                    || (resource.data.estado != 'cancelada'
+                        && request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['fecha', 'hora', 'estado', 'timestampActualizacion'])
                         && request.resource.data.estado == 'reprogramada'
                         && fechaValida(request.resource.data.fecha)
